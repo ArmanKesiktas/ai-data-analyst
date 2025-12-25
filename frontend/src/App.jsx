@@ -15,7 +15,8 @@ import KeyboardShortcutsModal from './components/KeyboardShortcutsModal'
 import OnboardingTour, { useOnboarding } from './components/OnboardingTour'
 import LoginPage from './components/LoginPage'
 import LandingPage from './components/LandingPage'
-import { WorkspaceProvider } from './context/WorkspaceContext'
+import CopyTableModal from './components/CopyTableModal'
+import { WorkspaceProvider, useWorkspace } from './context/WorkspaceContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
@@ -39,6 +40,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true) // For mobile responsive
   const [isMobile, setIsMobile] = useState(false)
   const [showLanding, setShowLanding] = useState(true) // Show landing page first
+  const [copyTableModal, setCopyTableModal] = useState({ isOpen: false, tableName: null, tableData: null })
 
   // Onboarding tour
   const { shouldRun: runOnboarding, completeOnboarding, resetOnboarding } = useOnboarding()
@@ -76,6 +78,7 @@ function App() {
         setShowUploader(false)
         setShowShortcuts(false)
         setEditingTable(null)
+        closeCopyTableModal()
         if (isMobile) setSidebarOpen(false)
       }
     }
@@ -116,6 +119,19 @@ function App() {
     } catch (err) {
       alert(err.response?.data?.detail || 'Could not delete table')
     }
+  }
+
+  const handleCopyTable = (tableName) => {
+    const tableData = tables.find(t => t.name === tableName)
+    setCopyTableModal({
+      isOpen: true,
+      tableName,
+      tableData
+    })
+  }
+
+  const closeCopyTableModal = () => {
+    setCopyTableModal({ isOpen: false, tableName: null, tableData: null })
   }
 
   const handleAnalyze = async (q) => {
@@ -262,6 +278,7 @@ function App() {
                 if (isMobile) setSidebarOpen(false)
               }}
               onEditTable={(tableName) => setEditingTable(tableName)}
+              onCopyTable={handleCopyTable}
             />
           </div>
 
@@ -299,6 +316,15 @@ function App() {
                 }}
               />
             )}
+
+            {/* Copy Table Modal */}
+            <CopyTableModal
+              isOpen={copyTableModal.isOpen}
+              onClose={closeCopyTableModal}
+              tableName={copyTableModal.tableName}
+              tableData={copyTableModal.tableData}
+              currentWorkspaceId={1} // This should come from WorkspaceContext
+            />
 
             {/* Page Content */}
             {currentPage === 'table-builder' ? (

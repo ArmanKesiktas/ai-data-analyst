@@ -1,0 +1,296 @@
+import { useState } from 'react'
+import { X, Mail, UserPlus, Check, Copy as CopyIcon, Users, Shield, Eye } from 'lucide-react'
+import { useWorkspace } from '../context/WorkspaceContext'
+
+/**
+ * InviteToWorkspaceModal - Modal for inviting users to workspace
+ *
+ * Features:
+ * - Email invitation with role selection
+ * - Share link generation
+ * - Pending invitations list
+ * - Role-based access control
+ */
+export default function InviteToWorkspaceModal({ isOpen, onClose }) {
+    const { currentWorkspace, inviteToWorkspace, pendingInvitations = [], cancelInvitation } = useWorkspace()
+    const [email, setEmail] = useState('')
+    const [role, setRole] = useState('viewer')
+    const [inviting, setInviting] = useState(false)
+    const [invited, setInvited] = useState(false)
+    const [shareLink, setShareLink] = useState('')
+    const [linkCopied, setLinkCopied] = useState(false)
+
+    if (!isOpen) return null
+
+    const handleInvite = async (e) => {
+        e.preventDefault()
+
+        if (!email) return
+
+        setInviting(true)
+
+        try {
+            await new Promise(resolve => setTimeout(resolve, 500))
+
+            // Generate invite link
+            const inviteToken = Math.random().toString(36).substring(2, 15)
+            const link = `${window.location.origin}/join/${inviteToken}`
+
+            inviteToWorkspace(currentWorkspace.id, email, role, inviteToken)
+
+            setShareLink(link)
+            setInvited(true)
+            setEmail('')
+
+            setTimeout(() => {
+                setInvited(false)
+            }, 3000)
+
+        } catch (error) {
+            console.error('Failed to send invitation:', error)
+        } finally {
+            setInviting(false)
+        }
+    }
+
+    const handleCopyLink = () => {
+        if (shareLink) {
+            navigator.clipboard.writeText(shareLink)
+            setLinkCopied(true)
+            setTimeout(() => setLinkCopied(false), 2000)
+        }
+    }
+
+    const roleOptions = [
+        {
+            value: 'viewer',
+            label: 'Viewer',
+            icon: Eye,
+            description: 'Can view data and dashboards',
+            color: 'text-gray-600'
+        },
+        {
+            value: 'editor',
+            label: 'Editor',
+            icon: Users,
+            description: 'Can edit data and create dashboards',
+            color: 'text-blue-600'
+        },
+        {
+            value: 'owner',
+            label: 'Owner',
+            icon: Shield,
+            description: 'Full access including workspace settings',
+            color: 'text-purple-600'
+        }
+    ]
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden max-h-[90vh] flex flex-col">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                            <UserPlus className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-semibold text-white">Invite to Workspace</h2>
+                            <p className="text-sm text-blue-100">{currentWorkspace.name}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="text-white/80 hover:text-white transition-colors"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 overflow-y-auto flex-1">
+                    {/* Invitation Form */}
+                    <form onSubmit={handleInvite} className="mb-6">
+                        <div className="space-y-4">
+                            {/* Email Input */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Email Address
+                                </label>
+                                <div className="relative">
+                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="colleague@example.com"
+                                        className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
+                                        disabled={inviting}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Role Selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-3">
+                                    Select Role
+                                </label>
+                                <div className="grid grid-cols-1 gap-3">
+                                    {roleOptions.map((option) => {
+                                        const Icon = option.icon
+                                        return (
+                                            <button
+                                                key={option.value}
+                                                type="button"
+                                                onClick={() => setRole(option.value)}
+                                                disabled={inviting}
+                                                className={`p-4 border-2 rounded-xl text-left transition-all ${
+                                                    role === option.value
+                                                        ? 'border-blue-500 bg-blue-50'
+                                                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                                                } disabled:opacity-50`}
+                                            >
+                                                <div className="flex items-start justify-between">
+                                                    <div className="flex items-start gap-3">
+                                                        <Icon className={`w-5 h-5 mt-0.5 ${option.color}`} />
+                                                        <div>
+                                                            <div className="font-medium text-gray-900">{option.label}</div>
+                                                            <div className="text-sm text-gray-500 mt-0.5">{option.description}</div>
+                                                        </div>
+                                                    </div>
+                                                    {role === option.value && (
+                                                        <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                                                            <Check className="w-3 h-3 text-white" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Success Message */}
+                        {invited && (
+                            <div className="mt-4 p-4 bg-green-50 border-2 border-green-200 rounded-xl">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <Check className="w-4 h-4 text-white" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="font-medium text-green-900">Invitation sent!</div>
+                                        <div className="text-sm text-green-700 mt-1">
+                                            An email has been sent with instructions to join the workspace.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Share Link */}
+                        {shareLink && (
+                            <div className="mt-4 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                                <div className="text-sm font-medium text-gray-700 mb-2">Share Link</div>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={shareLink}
+                                        readOnly
+                                        className="flex-1 px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleCopyLink}
+                                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+                                    >
+                                        {linkCopied ? (
+                                            <>
+                                                <Check className="w-4 h-4" />
+                                                Copied
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CopyIcon className="w-4 h-4" />
+                                                Copy
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Submit Button */}
+                        <div className="mt-6 flex gap-3">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+                            >
+                                Close
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={!email || inviting}
+                                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {inviting ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Sending...
+                                    </>
+                                ) : (
+                                    <>
+                                        <UserPlus className="w-5 h-5" />
+                                        Send Invitation
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
+
+                    {/* Pending Invitations */}
+                    {pendingInvitations.length > 0 && (
+                        <div className="border-t pt-6">
+                            <h3 className="font-medium text-gray-900 mb-4">Pending Invitations</h3>
+                            <div className="space-y-2">
+                                {pendingInvitations.map((invitation) => (
+                                    <div
+                                        key={invitation.id}
+                                        className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                                                <Mail className="w-4 h-4 text-gray-600" />
+                                            </div>
+                                            <div>
+                                                <div className="font-medium text-gray-900">{invitation.email}</div>
+                                                <div className="text-sm text-gray-500">
+                                                    Role: {invitation.role} • Sent {new Date(invitation.sentAt).toLocaleDateString()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => cancelInvitation(invitation.id)}
+                                            className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Info Note */}
+                    <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-xl">
+                        <p className="text-xs text-gray-600">
+                            <strong>Note:</strong> Invited users will receive an email with a link to join this workspace.
+                            They can accept the invitation within 7 days. You can manage workspace members in the workspace settings.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}

@@ -10,7 +10,8 @@ import {
     ChevronRight,
     Sparkles,
     Pencil,
-    TableProperties
+    TableProperties,
+    Copy
 } from 'lucide-react'
 
 export default function Sidebar({
@@ -24,7 +25,8 @@ export default function Sidebar({
     onUploadClick,
     onSelectQuery,
     onCreateTable,
-    onEditTable
+    onEditTable,
+    onCopyTable
 }) {
     const [showTables, setShowTables] = useState(true)
     const [showHistory, setShowHistory] = useState(true)
@@ -122,6 +124,13 @@ export default function Sidebar({
                                     <span className="text-xs text-gray-400">{table.row_count} rows</span>
                                     <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity">
                                         <button
+                                            onClick={(e) => { e.stopPropagation(); if (onCopyTable) onCopyTable(table.name); }}
+                                            className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-blue-600"
+                                            title="Copy to workspace"
+                                        >
+                                            <Copy className="w-3 h-3" />
+                                        </button>
+                                        <button
                                             onClick={(e) => { e.stopPropagation(); if (onEditTable) onEditTable(table.name); }}
                                             className="p-1 hover:bg-gray-200 rounded text-gray-400"
                                             title="Edit table"
@@ -131,7 +140,7 @@ export default function Sidebar({
                                         {table.name !== 'sales' && (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); onDeleteTable(table.name); }}
-                                                className="p-1 hover:bg-gray-200 rounded text-gray-400"
+                                                className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-red-600"
                                                 title="Delete table"
                                             >
                                                 <Trash2 className="w-3 h-3" />

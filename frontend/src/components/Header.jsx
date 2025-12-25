@@ -1,10 +1,13 @@
 import { useState } from 'react'
-import { Bell, User, ChevronDown, FolderOpen, Users, Settings, LogOut, Plus, Check, CheckCheck, Trash2, Moon, Sun, Menu } from 'lucide-react'
+import { Bell, User, ChevronDown, FolderOpen, Users, Settings, LogOut, Plus, Check, CheckCheck, Trash2, Moon, Sun, Menu, UserPlus } from 'lucide-react'
 import { useWorkspace } from '../context/WorkspaceContext'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import CreateWorkspaceModal from './CreateWorkspaceModal'
 import ProfileSettingsModal from './ProfileSettingsModal'
+import InviteToWorkspaceModal from './InviteToWorkspaceModal'
+import EnhancedProfileSettings from './EnhancedProfileSettings'
+import GeneralSettingsModal from './GeneralSettingsModal'
 
 // Theme Toggle Component
 function ThemeToggle() {
@@ -49,6 +52,9 @@ export default function Header({ onMenuClick }) {
     const [showProfileMenu, setShowProfileMenu] = useState(false)
     const [showCreateWorkspace, setShowCreateWorkspace] = useState(false)
     const [showProfileSettings, setShowProfileSettings] = useState(false)
+    const [showInviteModal, setShowInviteModal] = useState(false)
+    const [showEnhancedSettings, setShowEnhancedSettings] = useState(false)
+    const [showGeneralSettings, setShowGeneralSettings] = useState(false)
 
     const formatTime = (isoString) => {
         const date = new Date(isoString)
@@ -132,16 +138,22 @@ export default function Header({ onMenuClick }) {
                                         <button
                                             onClick={() => {
                                                 setShowWorkspaceMenu(false)
+                                                setShowInviteModal(true)
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-blue-50 text-blue-600 text-sm font-medium"
+                                        >
+                                            <UserPlus className="w-4 h-4" />
+                                            Invite Members
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowWorkspaceMenu(false)
                                                 setShowCreateWorkspace(true)
                                             }}
                                             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-600 text-sm"
                                         >
                                             <Plus className="w-4 h-4" />
                                             Create New Workspace
-                                        </button>
-                                        <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-600 text-sm">
-                                            <Users className="w-4 h-4" />
-                                            Join Workspace
                                         </button>
                                     </div>
                                 </div>
@@ -240,16 +252,22 @@ export default function Header({ onMenuClick }) {
                                         <button
                                             onClick={() => {
                                                 setShowProfileMenu(false)
-                                                setShowProfileSettings(true)
+                                                setShowEnhancedSettings(true)
                                             }}
                                             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm"
                                         >
                                             <User className="w-4 h-4" />
-                                            Profile Settings
+                                            Account Settings
                                         </button>
-                                        <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm">
+                                        <button
+                                            onClick={() => {
+                                                setShowProfileMenu(false)
+                                                setShowGeneralSettings(true)
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm"
+                                        >
                                             <Settings className="w-4 h-4" />
-                                            Preferences
+                                            Workspace Settings
                                         </button>
                                     </div>
                                     <div className="border-t border-gray-100 p-2">
@@ -272,16 +290,24 @@ export default function Header({ onMenuClick }) {
             </header >
 
             {/* Modals */}
-            {
-                showCreateWorkspace && (
-                    <CreateWorkspaceModal onClose={() => setShowCreateWorkspace(false)} />
-                )
-            }
-            {
-                showProfileSettings && (
-                    <ProfileSettingsModal onClose={() => setShowProfileSettings(false)} />
-                )
-            }
+            {showCreateWorkspace && (
+                <CreateWorkspaceModal onClose={() => setShowCreateWorkspace(false)} />
+            )}
+            {showProfileSettings && (
+                <ProfileSettingsModal onClose={() => setShowProfileSettings(false)} />
+            )}
+            {showInviteModal && (
+                <InviteToWorkspaceModal
+                    isOpen={showInviteModal}
+                    onClose={() => setShowInviteModal(false)}
+                />
+            )}
+            {showEnhancedSettings && (
+                <EnhancedProfileSettings onClose={() => setShowEnhancedSettings(false)} />
+            )}
+            {showGeneralSettings && (
+                <GeneralSettingsModal onClose={() => setShowGeneralSettings(false)} />
+            )}
         </>
     )
 }
