@@ -39,42 +39,32 @@ export default function LandingPage({ onGetStarted }) {
 
     const features = [
         {
-            icon: Sparkles,
-            title: 'AI-Powered Analysis',
-            description: 'Ask questions in natural language. Our AI understands your data and generates insights instantly.'
+            icon: Table2,
+            title: 'Build Your Own Data Models—No Database Skills Required',
+            description: 'Start with a blank canvas or upload CSVs. Define fields, set data types, add rows manually or in bulk. Quanty gives you spreadsheet-like simplicity with database-grade structure.'
         },
         {
-            icon: Upload,
-            title: 'Easy Data Import',
-            description: 'Upload CSV or Excel files with drag & drop. Your data is ready in seconds.'
+            icon: Sparkles,
+            title: 'Ask Questions, Get Answers—In Seconds',
+            description: 'Type natural language queries like "What were our top products last month?" AI generates the SQL, runs the analysis, and creates charts automatically. No training needed.'
+        },
+        {
+            icon: Users,
+            title: 'Work Together in Isolated, Secure Workspaces',
+            description: 'Create dedicated workspaces for each project or team. Invite members with role-based permissions (Owner, Editor, Viewer). Data stays private within each workspace—perfect for multi-client or multi-project setups.'
         },
         {
             icon: LayoutDashboard,
-            title: 'Dynamic Dashboards',
-            description: 'Create beautiful, interactive dashboards with just a description. No coding required.'
-        },
-        {
-            icon: Shield,
-            title: 'Secure & Private',
-            description: 'Your data stays secure with enterprise-grade encryption and authentication.'
-        },
-        {
-            icon: Zap,
-            title: 'Lightning Fast',
-            description: 'Get results in milliseconds. Optimized query engine for maximum performance.'
-        },
-        {
-            icon: Database,
-            title: 'Multiple Tables',
-            description: 'Work with multiple datasets simultaneously. Cross-reference and analyze together.'
+            title: 'Live Dashboards That Update With Your Data',
+            description: 'Every query becomes a reusable dashboard widget. Share reports with your team, export to Excel, or embed visualizations. Your single source of truth, always up to date.'
         }
     ]
 
     const stats = [
-        { value: '10x', label: 'Faster Analysis' },
-        { value: '0', label: 'SQL Knowledge Required' },
-        { value: '100%', label: 'AI Powered' },
-        { value: '∞', label: 'Possibilities' }
+        { value: '10x', label: 'Faster Insights', subtext: 'From data upload to visualization in minutes, not days. No data team required.' },
+        { value: '0', label: 'SQL Knowledge Needed', subtext: 'Ask questions in plain English. AI translates to queries and shows results instantly.' },
+        { value: '100%', label: 'Team Collaboration', subtext: 'Workspace-based architecture. Every member sees the same data in real-time.' },
+        { value: 'Full', label: 'Data Control', subtext: 'Build custom tables from scratch. Your data model, your rules—no rigid templates.' }
     ]
 
     const screenshots = [
@@ -113,9 +103,9 @@ export default function LandingPage({ onGetStarted }) {
                         <img src="/quantyblack.png" alt="Quanty" className="h-6 w-auto" />
                     </div>
                     <div className="hidden md:flex items-center gap-8">
-                        <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors duration-300 text-sm font-medium">Features</a>
+                        <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors duration-300 text-sm font-medium">What You Can Do</a>
+                        <a href="#how-it-works" className="text-gray-600 hover:text-gray-900 transition-colors duration-300 text-sm font-medium">How It Works</a>
                         <a href="#screenshots" className="text-gray-600 hover:text-gray-900 transition-colors duration-300 text-sm font-medium">Product</a>
-                        <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors duration-300 text-sm font-medium">Pricing</a>
                     </div>
                     <div className="flex items-center gap-4">
                         <button
@@ -202,9 +192,11 @@ export default function LandingPage({ onGetStarted }) {
                     </h1>
 
                     {/* Subheadline */}
-                    <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10">
-                        Transform complex data into actionable insights. Just ask questions in plain English —
-                        no SQL, no code, no complexity.
+                    <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-4">
+                        For teams who need to build, analyze, and share data insights—without writing a single line of SQL or code.
+                    </p>
+                    <p className="text-lg text-gray-500 max-w-3xl mx-auto mb-10">
+                        Create custom data models, collaborate in shared workspaces, and let AI answer your business questions in seconds. Perfect for operations teams, analysts, and founders who want data autonomy.
                     </p>
 
                     {/* CTA Buttons */}
@@ -213,21 +205,27 @@ export default function LandingPage({ onGetStarted }) {
                             onClick={onGetStarted}
                             className="group bg-gray-900 hover:bg-gray-800 text-white px-8 py-4 rounded-full text-lg font-medium transition-all duration-300 hover:scale-105 flex items-center gap-2"
                         >
-                            Start Free Trial
+                            Start Building for Free
                             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
                         </button>
-                        <button className="group text-gray-600 hover:text-gray-900 px-8 py-4 rounded-full text-lg font-medium transition-all duration-300 flex items-center gap-2">
-                            <Play className="w-5 h-5" />
-                            Watch Demo
-                        </button>
+                        <a
+                            href="#how-it-works"
+                            className="group text-gray-600 hover:text-gray-900 px-8 py-4 rounded-full text-lg font-medium transition-all duration-300 flex items-center gap-2"
+                        >
+                            See How It Works
+                            <ChevronDown className="w-5 h-5 group-hover:translate-y-1 transition-transform duration-300" />
+                        </a>
                     </div>
 
                     {/* Stats */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto mb-20">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-5xl mx-auto mb-20">
                         {stats.map((stat, idx) => (
-                            <div key={idx} className="text-center">
+                            <div key={idx} className="text-center group">
                                 <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">{stat.value}</div>
-                                <div className="text-sm text-gray-500">{stat.label}</div>
+                                <div className="text-sm font-medium text-gray-700 mb-2">{stat.label}</div>
+                                <div className="text-xs text-gray-500 leading-relaxed max-w-[200px] mx-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    {stat.subtext}
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -282,14 +280,14 @@ export default function LandingPage({ onGetStarted }) {
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-16">
                         <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                            Everything You Need
+                            Everything You Need to Go from Data to Decisions
                         </h2>
                         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                            Powerful features designed to make data analysis accessible to everyone
+                            Build, analyze, and collaborate—all in one platform designed for non-technical users
                         </p>
                     </div>
 
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="grid md:grid-cols-2 gap-8">
                         {features.map((feature, idx) => (
                             <div
                                 key={idx}
@@ -310,8 +308,79 @@ export default function LandingPage({ onGetStarted }) {
                 </div>
             </section>
 
+            {/* How It Works Section */}
+            <section id="how-it-works" className="py-24 px-6 bg-white">
+                <div className="max-w-7xl mx-auto">
+                    <div className="text-center mb-16">
+                        <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                            From Zero to Insights in 3 Simple Steps
+                        </h2>
+                        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                            No technical expertise required. Start analyzing data in minutes.
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
+                        {/* Step 1 */}
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-gray-900 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-6">
+                                1
+                            </div>
+                            <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <Database className="w-6 h-6 text-gray-700" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-900 mb-3">Create Your Workspace</h3>
+                            <p className="text-gray-600">
+                                Sign up in seconds. Create your first workspace. It's your private data environment—invite your team or work solo.
+                            </p>
+                        </div>
+
+                        {/* Step 2 */}
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-gray-900 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-6">
+                                2
+                            </div>
+                            <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <Table2 className="w-6 h-6 text-gray-700" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-900 mb-3">Build or Upload Your Data</h3>
+                            <p className="text-gray-600">
+                                Upload CSV/Excel files or build tables from scratch. Define columns, add rows, edit anytime. No schemas, no migrations—just clean, structured data.
+                            </p>
+                        </div>
+
+                        {/* Step 3 */}
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-gray-900 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-6">
+                                3
+                            </div>
+                            <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <Sparkles className="w-6 h-6 text-gray-700" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-900 mb-3">Ask & Analyze</h3>
+                            <p className="text-gray-600">
+                                Type questions in plain English. AI handles the heavy lifting—queries, charts, KPIs appear instantly. Save dashboards, share with teammates, export results.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="text-center mt-12">
+                        <button
+                            onClick={onGetStarted}
+                            className="group bg-gray-900 hover:bg-gray-800 text-white px-8 py-4 rounded-full text-lg font-medium transition-all duration-300 hover:scale-105 inline-flex items-center gap-2"
+                        >
+                            Ready to Try It?
+                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+                        </button>
+                        <p className="text-gray-500 mt-4 text-sm">
+                            No credit card required • 5-minute setup • Free workspace forever
+                        </p>
+                    </div>
+                </div>
+            </section>
+
             {/* Screenshots Section */}
-            <section id="screenshots" className="py-24 px-6 relative overflow-hidden">
+            <section id="screenshots" className="py-24 px-6 bg-gray-50 relative overflow-hidden">
                 {/* Data-inspired floating icons for screenshots section */}
                 <div className="absolute inset-0 -z-5 overflow-hidden pointer-events-none">
                     <PieChart className="absolute top-20 left-[5%] w-14 h-14 text-gray-100 opacity-50 rotate-12" />
@@ -413,6 +482,72 @@ export default function LandingPage({ onGetStarted }) {
                 </div>
             </section>
 
+            {/* Trust & Credibility Section */}
+            <section className="py-24 px-6 bg-white border-t border-gray-100">
+                <div className="max-w-4xl mx-auto">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                            Built for Real-World Data Challenges
+                        </h2>
+                        <p className="text-lg text-gray-600 leading-relaxed">
+                            Quanty.studio started as a graduation project to solve a simple problem: giving non-technical teams the power to work with data like engineers do—without the complexity.
+                        </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-8 mb-12">
+                        {/* Trust Element 1 */}
+                        <div className="text-center p-6 bg-gray-50 rounded-xl">
+                            <div className="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <Users className="w-6 h-6 text-white" />
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">Early Access Program</h3>
+                            <p className="text-sm text-gray-600">
+                                Join our community of early adopters shaping the future of no-code data analysis
+                            </p>
+                        </div>
+
+                        {/* Trust Element 2 */}
+                        <div className="text-center p-6 bg-gray-50 rounded-xl">
+                            <div className="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <Shield className="w-6 h-6 text-white" />
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">Data Privacy First</h3>
+                            <p className="text-sm text-gray-600">
+                                Multi-tenant architecture with workspace-level isolation. Your data never mixes with others
+                            </p>
+                        </div>
+
+                        {/* Trust Element 3 */}
+                        <div className="text-center p-6 bg-gray-50 rounded-xl">
+                            <div className="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <Zap className="w-6 h-6 text-white" />
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">No Credit Card to Start</h3>
+                            <p className="text-sm text-gray-600">
+                                Free tier includes unlimited workspaces, sample data, and full AI access. Upgrade only when you scale
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-xl p-8 text-center border border-gray-200">
+                        <p className="text-gray-700 leading-relaxed mb-4">
+                            <strong>Who's using Quanty today?</strong> Startups tracking metrics without hiring a data team · Operations teams managing internal databases · Analysts who want flexibility without IT bottlenecks
+                        </p>
+                        <div className="flex flex-wrap justify-center gap-3 text-sm">
+                            <span className="px-4 py-2 bg-white rounded-full text-gray-600 border border-gray-200">
+                                ✓ No credit card required
+                            </span>
+                            <span className="px-4 py-2 bg-white rounded-full text-gray-600 border border-gray-200">
+                                ✓ 5-minute setup
+                            </span>
+                            <span className="px-4 py-2 bg-white rounded-full text-gray-600 border border-gray-200">
+                                ✓ Free workspace forever
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             {/* CTA Section */}
             <section className="py-24 px-6 bg-gray-900 relative overflow-hidden">
                 {/* Subtle data icons in dark section */}
@@ -423,30 +558,37 @@ export default function LandingPage({ onGetStarted }) {
 
                 <div className="max-w-4xl mx-auto text-center relative z-10">
                     <h2 className="text-4xl font-bold text-white mb-6">
-                        Ready to Transform Your Data?
+                        Stop Waiting for Data Teams. Start Building Today.
                     </h2>
-                    <p className="text-xl text-gray-400 mb-10">
-                        Join thousands of analysts who are already using Quanty to unlock insights from their data.
+                    <p className="text-xl text-gray-400 mb-10 max-w-3xl mx-auto">
+                        Create custom data models, collaborate with your team, and get AI-powered insights—all in one platform designed for non-technical users.
                     </p>
-                    <button
-                        onClick={onGetStarted}
-                        className="group bg-white hover:bg-gray-100 text-gray-900 px-10 py-5 rounded-full text-lg font-semibold transition-all duration-300 hover:scale-105 inline-flex items-center gap-3"
-                    >
-                        Get Started for Free
-                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
-                    </button>
-                    <p className="text-gray-500 mt-6 text-sm">
-                        No credit card required • Free forever plan available
-                    </p>
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <button
+                            onClick={onGetStarted}
+                            className="group bg-white hover:bg-gray-100 text-gray-900 px-10 py-5 rounded-full text-lg font-semibold transition-all duration-300 hover:scale-105 inline-flex items-center gap-3"
+                        >
+                            Start Building for Free
+                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+                        </button>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-6 mt-8 text-sm text-gray-400">
+                        <span>✓ No credit card required</span>
+                        <span>✓ 5-minute setup</span>
+                        <span>✓ Free workspace forever</span>
+                    </div>
                 </div>
             </section>
 
             {/* Footer */}
-            <footer className="py-12 px-6 border-t border-gray-100">
+            <footer className="py-12 px-6 border-t border-gray-100 bg-gray-50">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-3">
-                        <img src="/quantyblack.png" alt="Quanty" className="h-5 w-auto" />
-                        <span className="text-gray-500 text-sm">© 2024 Quanty. All rights reserved.</span>
+                    <div className="flex flex-col items-center md:items-start gap-2">
+                        <div className="flex items-center gap-3">
+                            <img src="/quantyblack.png" alt="Quanty" className="h-5 w-auto" />
+                            <span className="text-gray-500 text-sm">© 2025 Quanty. All rights reserved.</span>
+                        </div>
+                        <p className="text-xs text-gray-400">Made for teams who want data freedom</p>
                     </div>
                     <div className="flex items-center gap-6 text-sm text-gray-500">
                         <a href="#" className="hover:text-gray-900 transition-colors duration-300">Privacy</a>
