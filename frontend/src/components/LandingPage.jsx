@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
     ArrowRight,
     BarChart3,
@@ -16,11 +16,25 @@ import {
     PieChart,
     LineChart,
     Activity,
-    Table2
+    Table2,
+    ChevronLeft,
+    ChevronRight as ChevronRightIcon
 } from 'lucide-react'
 
 export default function LandingPage({ onGetStarted }) {
     const [activeScreenshot, setActiveScreenshot] = useState(0)
+    const [isPaused, setIsPaused] = useState(false)
+
+    // Auto-advance carousel every 4 seconds
+    useEffect(() => {
+        if (isPaused) return
+
+        const interval = setInterval(() => {
+            setActiveScreenshot(prev => (prev + 1) % 3)
+        }, 4000)
+
+        return () => clearInterval(interval)
+    }, [isPaused])
 
     const features = [
         {
@@ -303,22 +317,57 @@ export default function LandingPage({ onGetStarted }) {
                     </div>
 
                     {/* Screenshot Display */}
-                    <div className="relative max-w-5xl mx-auto">
+                    <div
+                        className="relative max-w-5xl mx-auto"
+                        onMouseEnter={() => setIsPaused(true)}
+                        onMouseLeave={() => setIsPaused(false)}
+                    >
                         <div className="absolute -inset-4 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-2xl blur-xl opacity-10"></div>
+
+                        {/* Navigation Arrows */}
+                        <button
+                            onClick={() => setActiveScreenshot(prev => prev === 0 ? 2 : prev - 1)}
+                            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 z-10 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors group"
+                        >
+                            <ChevronLeft className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
+                        </button>
+                        <button
+                            onClick={() => setActiveScreenshot(prev => (prev + 1) % 3)}
+                            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 z-10 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors group"
+                        >
+                            <ChevronRightIcon className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
+                        </button>
+
                         <div className="relative bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 transition-all duration-500">
-                            <div className="p-6 border-b border-gray-100">
-                                <h3 className="text-xl font-semibold text-gray-900">
-                                    {screenshots[activeScreenshot].title}
-                                </h3>
-                                <p className="text-gray-600 mt-1">
-                                    {screenshots[activeScreenshot].description}
-                                </p>
+                            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-xl font-semibold text-gray-900">
+                                        {screenshots[activeScreenshot].title}
+                                    </h3>
+                                    <p className="text-gray-600 mt-1">
+                                        {screenshots[activeScreenshot].description}
+                                    </p>
+                                </div>
+                                {/* Progress dots */}
+                                <div className="flex gap-2">
+                                    {screenshots.map((_, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => setActiveScreenshot(idx)}
+                                            className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${activeScreenshot === idx
+                                                    ? 'bg-blue-500 w-6'
+                                                    : 'bg-gray-300 hover:bg-gray-400'
+                                                }`}
+                                        />
+                                    ))}
+                                </div>
                             </div>
                             <div className="aspect-[16/10] bg-gray-50 overflow-hidden">
                                 <img
+                                    key={activeScreenshot}
                                     src={screenshots[activeScreenshot].placeholder}
                                     alt={screenshots[activeScreenshot].title}
-                                    className="w-full h-full object-cover object-top"
+                                    className="w-full h-full object-cover object-top animate-fadeIn"
                                     onError={(e) => {
                                         e.target.style.display = 'none';
                                         e.target.nextSibling.style.display = 'flex';
