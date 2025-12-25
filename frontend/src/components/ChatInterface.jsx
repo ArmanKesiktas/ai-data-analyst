@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { Send, Loader2, Sparkles } from 'lucide-react'
 
 const EXAMPLE_QUESTIONS = [
-  "Son 6 ayda en çok gelir getiren kategori hangisi?",
-  "Bu yıl kaç adet ürün satıldı?",
-  "Geçen aya göre bu ay satışlar ne kadar arttı?",
-  "En pahalı 5 ürün nedir?",
-  "Gıda kategorisinde ortalama satış değeri nedir?",
-  "Elektronik ve giyim kategorilerini karşılaştır",
-  "Son 3 ayda hangi ürün en çok satıldı?"
+  "Which category generated the most revenue in the last 6 months?",
+  "How many products were sold this year?",
+  "How much did sales increase compared to last month?",
+  "What are the top 5 most expensive products?",
+  "What is the average sales value in the food category?",
+  "Compare electronics and clothing categories",
+  "Which product sold the most in the last 3 months?"
 ]
 
 export default function ChatInterface({ onAnalyze, loading }) {
@@ -29,7 +29,7 @@ export default function ChatInterface({ onAnalyze, loading }) {
     <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 border border-white/20">
       <div className="flex items-center mb-4">
         <Sparkles className="w-5 h-5 text-yellow-300 mr-2" />
-        <h2 className="text-white font-semibold text-lg">Soru Sorun</h2>
+        <h2 className="text-white font-semibold text-lg">Ask a Question</h2>
       </div>
 
       <form onSubmit={handleSubmit} className="mb-6">
@@ -38,7 +38,7 @@ export default function ChatInterface({ onAnalyze, loading }) {
             type="text"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Örnek: Son 6 ayda en çok gelir getiren kategori hangisi?"
+            placeholder="Example: Which category generated the most revenue in the last 6 months?"
             className="flex-1 px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50"
             disabled={loading}
           />
@@ -50,12 +50,12 @@ export default function ChatInterface({ onAnalyze, loading }) {
             {loading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Analiz ediliyor...</span>
+                <span>Analyzing...</span>
               </>
             ) : (
               <>
                 <Send className="w-5 h-5" />
-                <span>Gönder</span>
+                <span>Send</span>
               </>
             )}
           </button>
@@ -64,7 +64,7 @@ export default function ChatInterface({ onAnalyze, loading }) {
 
       {/* Example Questions */}
       <div>
-        <p className="text-white/60 text-sm mb-3">Örnek sorular:</p>
+        <p className="text-white/60 text-sm mb-3">Example questions:</p>
         <div className="flex flex-wrap gap-2">
           {EXAMPLE_QUESTIONS.map((eq, idx) => (
             <button

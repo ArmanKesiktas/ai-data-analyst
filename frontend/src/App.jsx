@@ -14,6 +14,7 @@ import TableEditorModal from './components/TableEditorModal'
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal'
 import OnboardingTour, { useOnboarding } from './components/OnboardingTour'
 import LoginPage from './components/LoginPage'
+import LandingPage from './components/LandingPage'
 import { WorkspaceProvider } from './context/WorkspaceContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -37,6 +38,7 @@ function App() {
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true) // For mobile responsive
   const [isMobile, setIsMobile] = useState(false)
+  const [showLanding, setShowLanding] = useState(true) // Show landing page first
 
   // Onboarding tour
   const { shouldRun: runOnboarding, completeOnboarding, resetOnboarding } = useOnboarding()
@@ -53,6 +55,13 @@ function App() {
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Clear URL hash from landing page on mount
+  useEffect(() => {
+    if (window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname)
+    }
   }, [])
 
   // Keyboard shortcuts
@@ -72,7 +81,7 @@ function App() {
     }
   ])
 
-  // Tabloları yükle
+  // Load tables
   useEffect(() => {
     fetchTables()
   }, [])
@@ -85,7 +94,7 @@ function App() {
         setActiveTable(res.data.tables[0].name)
       }
     } catch (err) {
-      console.error('Tablo listesi alınamadı:', err)
+      console.error('Could not get table list:', err)
     }
   }
 
@@ -135,7 +144,7 @@ function App() {
         setError(res.data.error || 'An error occurred')
       }
     } catch (err) {
-      console.error('Analiz hatası:', err)
+      console.error('Analysis error:', err)
       if (err.response?.data?.detail) {
         setError(err.response.data.detail)
       } else if (err.message === 'Network Error') {
@@ -173,7 +182,11 @@ function App() {
 
   // Show login page if not authenticated
   if (!isAuthenticated) {
-    return <LoginPage />
+    // Show landing page first, then login
+    if (showLanding) {
+      return <LandingPage onGetStarted={() => setShowLanding(false)} />
+    }
+    return <LoginPage onBack={() => setShowLanding(true)} />
   }
 
   return (

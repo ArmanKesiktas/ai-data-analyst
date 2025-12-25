@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { Mail, Lock, User, Loader2, ArrowRight, LayoutDashboard, Sparkles, FileSpreadsheet } from 'lucide-react'
+import { Mail, Lock, User, Loader2, ArrowRight, ArrowLeft, LayoutDashboard, Sparkles, FileSpreadsheet } from 'lucide-react'
 
-function LoginPage() {
+function LoginPage({ onBack }) {
     const { login, register, error, clearError } = useAuth()
     const [isLogin, setIsLogin] = useState(true)
     const [loading, setLoading] = useState(false)
@@ -91,6 +91,14 @@ function LoginPage() {
                 {/* Logo - White version for dark background */}
                 <div className="relative z-10">
                     <div className="flex items-center gap-4 mb-8">
+                        {onBack && (
+                            <button
+                                onClick={onBack}
+                                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                            >
+                                <ArrowLeft className="w-5 h-5" />
+                            </button>
+                        )}
                         <img
                             src="/quantywhite.png"
                             alt="Quanty Logo"

@@ -1,5 +1,5 @@
 """
-AI Dashboard Builder - Kullanıcının istediği dashboard'u oluşturur
+AI Dashboard Builder - Creates dashboards based on user requests
 """
 from google import genai
 import os
@@ -8,32 +8,32 @@ import re
 from file_handler import get_dynamic_schema, get_table_preview
 
 class DashboardBuilder:
-    """AI destekli dashboard oluşturucu"""
+    """AI-powered dashboard builder"""
 
     def __init__(self, table_name: str = None):
         api_key = os.getenv('GEMINI_API_KEY')
         if not api_key:
-            raise ValueError("GEMINI_API_KEY bulunamadı!")
+            raise ValueError("GEMINI_API_KEY not found!")
 
         self.client = genai.Client(api_key=api_key)
         self.model_name = 'gemini-2.0-flash'
         self.table_name = table_name
         self.db_schema = get_dynamic_schema(table_name)
         
-        print(f"🔧 DashboardBuilder başlatıldı:")
-        print(f"   📋 Tablo: {self.table_name}")
-        print(f"   📊 Şema: {self.db_schema[:200]}...")
+        print(f"🔧 DashboardBuilder initialized:")
+        print(f"   📋 Table: {self.table_name}")
+        print(f"   📊 Schema: {self.db_schema[:200]}...")
         
-        # Örnek veri al
+        # Get sample data
         try:
             self.sample_data = get_table_preview(table_name, limit=5) if table_name else []
-            print(f"   📝 Örnek veri: {len(self.sample_data)} satır")
+            print(f"   📝 Sample data: {len(self.sample_data)} rows")
         except Exception as e:
-            print(f"   ❌ Örnek veri hatası: {str(e)}")
+            print(f"   ❌ Sample data error: {str(e)}")
             self.sample_data = []
 
     def _analyze_columns(self) -> dict:
-        """Tablo kolonlarını analiz et - filtre oluşturmak için"""
+        """Analyze table columns - for filter creation"""
         from sqlalchemy import create_engine, text, inspect
         import os
         
@@ -59,11 +59,11 @@ class DashboardBuilder:
                     col_name = col['name']
                     col_type = str(col['type']).upper()
                     
-                    # Unique değer sayısını kontrol et
+                    # Check unique value count
                     result = conn.execute(text(f"SELECT COUNT(DISTINCT {col_name}) FROM {self.table_name}"))
                     unique_count = result.scalar()
                     
-                    # Örnek değerler
+                    # Sample values
                     sample_result = conn.execute(text(f"SELECT DISTINCT {col_name} FROM {self.table_name} LIMIT 10"))
                     sample_values = [str(row[0]) for row in sample_result.fetchall() if row[0] is not None]
                     
@@ -78,7 +78,7 @@ class DashboardBuilder:
                             "type": "numeric"
                         })
                     elif unique_count <= 20:
-                        # Az sayıda unique değer = kategorik
+                        # Few unique values = categorical
                         column_info["categorical_columns"].append({
                             "name": col_name,
                             "unique_count": unique_count,
@@ -90,89 +90,101 @@ class DashboardBuilder:
                             "unique_count": unique_count
                         })
         except Exception as e:
-            print(f"Kolon analizi hatası: {str(e)}")
+            print(f"Column analysis error: {str(e)}")
         
         return column_info
 
     def generate_dashboard(self, user_request: str) -> dict:
         """
-        Kullanıcının isteğine göre dashboard konfigürasyonu oluştur
+        Create dashboard configuration based on user request
         
         Args:
-            user_request: Kullanıcının dashboard açıklaması
-            Örnek: "Günlük satış trendi, kategorilere göre pasta grafiği, 
-                    aylık karşılaştırma ve tarih filtresi olsun"
+            user_request: User's dashboard description
+            Example: "Daily sales trend, pie chart by categories, 
+                    monthly comparison and date filter"
         
         Returns:
-            Dashboard konfigürasyonu (widgets, filters, layout)
+            Dashboard configuration (widgets, filters, layout)
         """
         
-        # Kolon tiplerini analiz et
+        # Analyze column types
         column_types = self._analyze_columns()
         
-        prompt = f"""Sen bir veri analisti ve dashboard tasarımcısısın. 
-Kullanıcının istediği dashboard'u oluştur.
+        prompt = f"""You are a data analyst and dashboard designer. 
+Create the dashboard as requested by the user.
 
-VERİTABANI ŞEMASI:
+DATABASE SCHEMA:
 {self.db_schema}
 
-KOLON ANALİZİ:
+COLUMN ANALYSIS:
 {json.dumps(column_types, ensure_ascii=False)}
 
-ÖRNEK VERİLER:
+SAMPLE DATA:
 {json.dumps(self.sample_data[:3], ensure_ascii=False, default=str)}
 
-KULLANICI İSTEĞİ:
+USER REQUEST:
 {user_request}
 
-GÖREVİN:
-1. Kullanıcının istediği dashboard için widget'ları oluştur
-2. TABLO KOLONLARINA GÖRE UYGUN FİLTRELER OLUŞTUR:
-   - Tarih kolonları için date_range filtresi
-   - Kategorik kolonlar (az sayıda unique değer) için select filtresi
-   - Diğer metin kolonları için multi_select filtresi
+YOUR TASK:
+1. Create widgets for the dashboard as requested by the user
+2. CREATE SMART, TABLE-SPECIFIC FILTERS based on the actual data columns:
+   - For date/time columns: use date_range filter
+   - For categorical columns with few unique values (e.g., category, status, type, region): use select filter
+   - For columns with many unique values that users might want to filter: use multi_select filter
+   
+IMPORTANT FILTER RULES:
+- ONLY create filters for columns that make sense for filtering (categories, dates, status fields)
+- DO NOT create filters for ID columns, numeric measurement columns, or metadata columns
+- Filter labels should be user-friendly and describe what the filter does (e.g., "Category", "Date Range", "Product Type")
+- Include 2-4 useful filters maximum, not every column needs a filter
+- Look at the sample data to understand what columns are good filter candidates
 
-WIDGET TÜRLERİ:
-- kpi: Tek sayısal değer gösterimi (toplam, ortalama vb.)
-- bar_chart: Çubuk grafik (kategori bazlı karşılaştırma)
-- line_chart: Çizgi grafik (zaman serisi, trend)
-- pie_chart: Pasta grafik (dağılım, yüzde)
-- area_chart: Alan grafiği (trend)
-- table: Veri tablosu
+EXAMPLES OF GOOD FILTERS:
+- For a sales table: "Order Date", "Category", "Region", "Product Type"
+- For an aircraft table: "Manufacturer", "Aircraft Type", "Engine Type"
+- For a plants table: "Climate Zone", "Region", "Species Family"
 
-FİLTRE TÜRLERİ:
-- date_range: Tarih aralığı seçici (tarih kolonları için)
-- select: Dropdown seçici (kategorik kolonlar için)
-- multi_select: Çoklu seçim (metin kolonları için)
+WIDGET TYPES:
+- kpi: Single numeric value display (total, average, etc.)
+- bar_chart: Bar chart (category-based comparison)
+- line_chart: Line chart (time series, trend)
+- pie_chart: Pie chart (distribution, percentage)
+- area_chart: Area chart (trend)
+- table: Data table
 
-WIDGET BOYUTLARI (grid sisteminde):
-- small: 1 kolon genişliği
-- medium: 2 kolon genişliği  
-- large: 2 kolon genişliği, 2 satır yüksekliği
-- full: 4 kolon genişliği (tam satır)
+FILTER TYPES:
+- date_range: Date range picker (for date columns)
+- select: Dropdown selector (for categorical columns with few options)
+- multi_select: Multi-select (for columns with more options)
 
-ÇIKTI FORMATI (sadece JSON, başka hiçbir şey yazma):
+WIDGET SIZES (in grid system):
+- small: 1 column width
+- medium: 2 columns width  
+- large: 2 columns width, 2 rows height
+- full: 4 columns width (full row)
+
+OUTPUT FORMAT (JSON only, do not write anything else):
 {{
-  "title": "Dashboard başlığı",
-  "description": "Kısa açıklama",
+  "title": "Dashboard title",
+  "description": "Brief description",
   "filters": [
     {{
       "id": "filter_1",
       "type": "date_range|select|multi_select",
-      "label": "Filtre etiketi",
-      "column": "kolon_adi",
-      "options": ["değer1", "değer2"] // select/multi_select için
+      "label": "Filter label",
+      "column": "column_name",
+      "options": ["value1", "value2"] // for select/multi_select
     }}
   ],
   "widgets": [
     {{
       "id": "widget_1",
-      "title": "Widget başlığı",
+      "title": "Widget title",
       "type": "kpi|bar_chart|line_chart|pie_chart|area_chart|table",
       "size": "small|medium|large|full",
-      "sql": "SELECT ... FROM {self.table_name} (SQLite formatında)",
-      "x_axis": "x ekseni kolonu (grafik için)",
-      "y_axis": "y ekseni kolonu (grafik için)",
+      "sql": "SELECT ... FROM {self.table_name} (in SQLite format)",
+      "x_axis": "x axis column (for charts)",
+      "y_axis": "y axis column (for charts)",
       "color": "blue|green|purple|orange",
       "gridPosition": {{"x": 0, "y": 0, "w": 2, "h": 1}}
     }}
@@ -180,15 +192,16 @@ WIDGET BOYUTLARI (grid sisteminde):
   "layout": "grid"
 }}
 
-KURALLAR:
-1. SQL sorgularında sadece SELECT kullan
-2. Tablo adı: {self.table_name}
-3. SQLite sözdizimi kullan
-4. Her widget için gerçekçi SQL sorgusu yaz
-5. Sadece JSON döndür, açıklama ekleme
-6. Kullanıcının istediği HER öğeyi dahil et
-7. Filtreleri tablodaki kolonlara göre otomatik oluştur
-8. gridPosition'ları widget'ları mantıklı yerleştirmek için kullan (x: 0-3, y: 0+, w: 1-4, h: 1-2)
+RULES:
+1. Use only SELECT in SQL queries
+2. Table name: {self.table_name}
+3. Use SQLite syntax
+4. Write realistic SQL queries for each widget
+5. Return only JSON, do not add explanation
+6. Include EVERY element the user requested
+7. Automatically create filters based on table columns
+8. Use gridPosition to place widgets logically (x: 0-3, y: 0+, w: 1-4, h: 1-2)
+9. ALL titles, labels, and descriptions MUST be in English
 
 JSON:"""
 
@@ -200,8 +213,8 @@ JSON:"""
             
             result_text = response.text.strip()
             
-            # JSON'u parse et
-            # Markdown bloklarını temizle
+            # Parse JSON
+            # Clean markdown blocks
             result_text = re.sub(r'```json\s*', '', result_text)
             result_text = re.sub(r'```\s*', '', result_text)
             result_text = result_text.strip()
@@ -209,76 +222,76 @@ JSON:"""
             # JSON parse
             dashboard_config = json.loads(result_text)
             
-            # Her widget için SQL'i doğrula ve temizle
+            # Validate and clean SQL for each widget
             for widget in dashboard_config.get('widgets', []):
                 sql = widget.get('sql', '')
-                # SELECT'ten önceki her şeyi kaldır
+                # Remove everything before SELECT
                 select_match = re.search(r'\bSELECT\b', sql, re.IGNORECASE)
                 if select_match:
                     sql = sql[select_match.start():]
-                # Noktalı virgül ekle
+                # Add semicolon
                 if not sql.endswith(';'):
                     sql += ';'
                 widget['sql'] = sql
             
-            print(f"✅ Dashboard oluşturuldu: {dashboard_config.get('title', 'Untitled')}")
-            print(f"   - {len(dashboard_config.get('widgets', []))} widget")
-            print(f"   - {len(dashboard_config.get('filters', []))} filtre")
+            print(f"✅ Dashboard created: {dashboard_config.get('title', 'Untitled')}")
+            print(f"   - {len(dashboard_config.get('widgets', []))} widgets")
+            print(f"   - {len(dashboard_config.get('filters', []))} filters")
             
             return dashboard_config
             
         except json.JSONDecodeError as e:
-            print(f"❌ JSON parse hatası: {str(e)}")
+            print(f"❌ JSON parse error: {str(e)}")
             print(f"   Raw response: {result_text[:200]}...")
             return {
-                "error": "Dashboard oluşturulamadı. Lütfen daha açık bir şekilde tarif edin.",
-                "title": "Hata",
+                "error": "Could not create dashboard. Please describe more clearly.",
+                "title": "Error",
                 "widgets": [],
                 "filters": []
             }
         except Exception as e:
-            print(f"❌ Dashboard oluşturma hatası: {str(e)}")
+            print(f"❌ Dashboard creation error: {str(e)}")
             return {
                 "error": str(e),
-                "title": "Hata",
+                "title": "Error",
                 "widgets": [],
                 "filters": []
             }
 
     def execute_widget_query(self, sql: str) -> list:
-        """Widget için SQL sorgusunu çalıştır"""
+        """Execute SQL query for widget"""
         from query_executor import QueryExecutor
         import re
         
         try:
-            # SQL'i temizle
+            # Clean SQL
             sql = sql.strip()
             
-            # Markdown bloklarını temizle
+            # Clean markdown blocks
             sql = re.sub(r'```(?:sql|sqlite)?\s*', '', sql)
             sql = re.sub(r'```\s*', '', sql)
             
-            # SELECT'ten önceki her şeyi kaldır
+            # Remove everything before SELECT
             select_match = re.search(r'\bSELECT\b', sql, re.IGNORECASE)
             if select_match:
                 sql = sql[select_match.start():]
             
-            # Noktalı virgülden sonrasını kaldır
+            # Remove everything after semicolon
             if ';' in sql:
                 sql = sql[:sql.index(';') + 1]
             else:
                 sql += ';'
             
-            print(f"📊 Widget sorgusu: {sql[:100]}...")
+            print(f"📊 Widget query: {sql[:100]}...")
             
             with QueryExecutor() as executor:
                 df = executor.execute_query(sql)
                 result = df.to_dict('records')
-                print(f"   ✅ {len(result)} satır döndü")
+                print(f"   ✅ {len(result)} rows returned")
                 return result
                 
         except Exception as e:
-            print(f"❌ Widget sorgu hatası: {str(e)}")
+            print(f"❌ Widget query error: {str(e)}")
             print(f"   SQL: {sql[:200]}")
             return []
 

@@ -11,7 +11,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         {payload.map((entry, index) => (
           <p key={index} className="text-sm" style={{ color: entry.color }}>
             {entry.name}: {typeof entry.value === 'number'
-              ? entry.value.toLocaleString('tr-TR')
+              ? entry.value.toLocaleString('en-US')
               : entry.value}
           </p>
         ))}
@@ -62,7 +62,7 @@ export default function ChartDisplay({ data, config }) {
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => value.toLocaleString('tr-TR')}
+                tickFormatter={(value) => value.toLocaleString('en-US')}
               />
               <Tooltip content={<CustomTooltip />} />
               <Bar
@@ -98,7 +98,7 @@ export default function ChartDisplay({ data, config }) {
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => value.toLocaleString('tr-TR')}
+                tickFormatter={(value) => value.toLocaleString('en-US')}
               />
               <Tooltip content={<CustomTooltip />} />
               <Area
@@ -144,24 +144,24 @@ export default function ChartDisplay({ data, config }) {
         )
 
       default:
-        return <p className="text-gray-500">Grafik türü desteklenmiyor: {type}</p>
+        return <p className="text-gray-500">Chart type not supported: {type}</p>
     }
   }
 
   return (
-    <div className="card p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="card overflow-hidden h-full flex flex-col">
+      <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100">
         <div className="flex items-center gap-2">
           {getChartIcon()}
-          <h3 className="font-semibold text-gray-800">Veri Görselleştirme</h3>
+          <h3 className="font-semibold text-gray-800">Data Visualization</h3>
         </div>
-        <div className="flex gap-2">
-          <button className="btn-secondary py-1.5 px-3 text-xs">
-            Son 1 Ay
-          </button>
-        </div>
+        <button className="btn-secondary py-1.5 px-3 text-xs">
+          Last 30 Days
+        </button>
       </div>
-      {renderChart()}
+      <div className="flex-1 p-6">
+        {renderChart()}
+      </div>
     </div>
   )
 }

@@ -283,45 +283,43 @@ function DashboardFilter({ filter, value, onChange }) {
     switch (type) {
         case 'date_range':
             return (
-                <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
                     <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-gray-400" />
-                        <span className="text-xs font-medium text-gray-600">{label}</span>
+                        <span className="text-xs font-medium text-gray-600 whitespace-nowrap">{label}:</span>
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        {/* Quick presets */}
-                        <div className="flex gap-1">
-                            {[
-                                { key: 'today', label: 'Today' },
-                                { key: 'week', label: '7 Days' },
-                                { key: 'month', label: '30 Days' },
-                                { key: 'year', label: 'Year' }
-                            ].map(preset => (
-                                <button
-                                    key={preset.key}
-                                    onClick={() => onChange(getDatePreset(preset.key))}
-                                    className="px-2 py-1 text-xs rounded-md bg-gray-100 hover:bg-blue-100 hover:text-blue-600 transition-colors"
-                                >
-                                    {preset.label}
-                                </button>
-                            ))}
-                        </div>
-                        {/* Custom range */}
-                        <div className="flex items-center gap-1">
-                            <input
-                                type="date"
-                                value={value?.start || ''}
-                                className="px-2 py-1 border border-gray-200 rounded-md text-xs focus:border-blue-400 focus:ring-1 focus:ring-blue-200 outline-none"
-                                onChange={(e) => onChange({ ...value, start: e.target.value })}
-                            />
-                            <span className="text-gray-400 text-xs">→</span>
-                            <input
-                                type="date"
-                                value={value?.end || ''}
-                                className="px-2 py-1 border border-gray-200 rounded-md text-xs focus:border-blue-400 focus:ring-1 focus:ring-blue-200 outline-none"
-                                onChange={(e) => onChange({ ...value, end: e.target.value })}
-                            />
-                        </div>
+                    {/* Quick presets */}
+                    <div className="flex gap-1">
+                        {[
+                            { key: 'today', label: 'Today' },
+                            { key: 'week', label: '7 Days' },
+                            { key: 'month', label: '30 Days' },
+                            { key: 'year', label: 'Year' }
+                        ].map(preset => (
+                            <button
+                                key={preset.key}
+                                onClick={() => onChange(getDatePreset(preset.key))}
+                                className="px-2 py-1 text-xs rounded-md bg-white border border-gray-200 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition-colors"
+                            >
+                                {preset.label}
+                            </button>
+                        ))}
+                    </div>
+                    {/* Custom range */}
+                    <div className="flex items-center gap-1">
+                        <input
+                            type="date"
+                            value={value?.start || ''}
+                            className="px-2 py-1 border border-gray-200 rounded-md text-xs focus:border-blue-400 focus:ring-1 focus:ring-blue-200 outline-none bg-white"
+                            onChange={(e) => onChange({ ...value, start: e.target.value })}
+                        />
+                        <span className="text-gray-400 text-xs">→</span>
+                        <input
+                            type="date"
+                            value={value?.end || ''}
+                            className="px-2 py-1 border border-gray-200 rounded-md text-xs focus:border-blue-400 focus:ring-1 focus:ring-blue-200 outline-none bg-white"
+                            onChange={(e) => onChange({ ...value, end: e.target.value })}
+                        />
                     </div>
                 </div>
             )
@@ -330,11 +328,11 @@ function DashboardFilter({ filter, value, onChange }) {
         case 'multi_select':
             const filterOptions = filter.options || []
             return (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
                     <Filter className="w-4 h-4 text-gray-400" />
-                    <span className="text-xs font-medium text-gray-600">{label}:</span>
+                    <span className="text-xs font-medium text-gray-600 whitespace-nowrap">{label}:</span>
                     <select
-                        className="px-3 py-1.5 border border-gray-200 rounded-md text-xs min-w-[140px] bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200 outline-none cursor-pointer"
+                        className="px-3 py-1 border border-gray-200 rounded-md text-xs min-w-[140px] bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200 outline-none cursor-pointer"
                         onChange={(e) => onChange(e.target.value)}
                         value={value || ''}
                     >
@@ -716,7 +714,7 @@ export default function ReportsPage({ activeTable, tables }) {
                 }))
             }
         } catch (err) {
-            console.error('Widget yenileme hatası:', err)
+            console.error('Widget refresh error:', err)
         }
     }
 
@@ -742,7 +740,7 @@ export default function ReportsPage({ activeTable, tables }) {
         if (isFirstLoad) return
 
         // Filtre değişti mi? (aktiften pasife veya pasiften aktife veya değer değişti)
-        console.log('🔄 Filtreler değişti:', filterValues, 'Aktif:', hasActiveFilter, 'Önceki aktif:', hadActiveFilter)
+        console.log('🔄 Filters changed:', filterValues, 'Active:', hasActiveFilter, 'Previous active:', hadActiveFilter)
 
         // Tüm widget'ları yenile
         // hasActiveFilter true ise filtreli, false ise filtresiz (orijinal SQL)
@@ -806,7 +804,7 @@ export default function ReportsPage({ activeTable, tables }) {
                 allowTaint: true,
                 foreignObjectRendering: false
             })
-            console.log('   ✅ Canvas oluşturuldu:', canvas.width, 'x', canvas.height)
+            console.log('   ✅ Canvas created:', canvas.width, 'x', canvas.height)
 
             const imgData = canvas.toDataURL('image/png')
             console.log('   📄 Image data uzunluğu:', imgData.length)
@@ -816,7 +814,7 @@ export default function ReportsPage({ activeTable, tables }) {
                 unit: 'px',
                 format: [canvas.width, canvas.height]
             })
-            console.log('   📄 PDF oluşturuldu')
+            console.log('   📄 PDF created')
 
             pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
 
@@ -842,7 +840,7 @@ export default function ReportsPage({ activeTable, tables }) {
             if (wasEditing) setIsEditing(true)
 
         } catch (err) {
-            console.error('❌ PDF export hatası:', err)
+            console.error('❌ PDF export error:', err)
             alert(`Error creating PDF: ${err.message}`)
         } finally {
             setExporting(false)
@@ -1066,12 +1064,12 @@ export default function ReportsPage({ activeTable, tables }) {
                                 {exporting ? (
                                     <>
                                         <Loader2 className="w-4 h-4 animate-spin" />
-                                        <span>PDF Oluşturuluyor...</span>
+                                        <span>Creating PDF...</span>
                                     </>
                                 ) : (
                                     <>
                                         <FileDown className="w-4 h-4" />
-                                        <span>PDF İndir</span>
+                                        <span>Download PDF</span>
                                     </>
                                 )}
                             </button>
@@ -1117,7 +1115,7 @@ export default function ReportsPage({ activeTable, tables }) {
                                     </button>
                                 )}
                             </div>
-                            <div className="flex flex-wrap items-start gap-4">
+                            <div className="flex flex-wrap items-center gap-3">
                                 {dashboard.filters.map((filter, idx) => (
                                     <DashboardFilter
                                         key={idx}
@@ -1204,7 +1202,7 @@ export default function ReportsPage({ activeTable, tables }) {
                                                                         />
                                                                     ))}
                                                                 </div>
-                                                                <p className="text-[10px] text-gray-400 mt-2 text-center">{COLOR_LABELS[COLOR_NAMES.indexOf(widget.color)] || 'Mavi'}</p>
+                                                                <p className="text-[10px] text-gray-400 mt-2 text-center">{COLOR_LABELS[COLOR_NAMES.indexOf(widget.color)] || 'Blue'}</p>
                                                             </div>
                                                         </div>
                                                         {/* Silme Butonu */}
@@ -1223,7 +1221,7 @@ export default function ReportsPage({ activeTable, tables }) {
                                                     <button
                                                         onClick={() => refreshWidget(widget)}
                                                         className="p-1 hover:bg-gray-100 rounded"
-                                                        title="Yenile"
+                                                        title="Refresh"
                                                     >
                                                         <RefreshCw className="w-3.5 h-3.5 text-gray-400" />
                                                     </button>

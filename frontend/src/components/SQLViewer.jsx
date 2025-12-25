@@ -25,39 +25,30 @@ export default function SQLViewer({ sql }) {
   }
 
   return (
-    <div className="card overflow-hidden">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-6 py-4 flex items-center justify-between text-gray-700 hover:bg-gray-50 transition-colors"
-      >
+    <div className="card overflow-hidden h-full flex flex-col">
+      <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100">
         <div className="flex items-center gap-2">
           <Terminal className="w-5 h-5 text-gray-600" />
-          <span className="font-semibold">SQL Sorgusu</span>
+          <span className="font-semibold text-gray-800">SQL Query</span>
           <span className="badge bg-gray-100 text-gray-600 ml-2">Auto-generated</span>
         </div>
-        {isOpen ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-      </button>
-
-      {isOpen && (
-        <div className="px-6 pb-6">
-          <div className="relative">
-            <pre className="bg-gray-900 rounded-xl p-4 text-sm overflow-x-auto font-mono">
-              <code className="text-gray-300">{formatSQL(sql)}</code>
-            </pre>
-            <button
-              onClick={handleCopy}
-              className="absolute top-3 right-3 p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors group"
-              title="Kopyala"
-            >
-              {copied ? (
-                <Check className="w-4 h-4 text-white" />
-              ) : (
-                <Copy className="w-4 h-4 text-gray-400 group-hover:text-white" />
-              )}
-            </button>
-          </div>
-        </div>
-      )}
+        <button
+          onClick={handleCopy}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors group"
+          title="Copy"
+        >
+          {copied ? (
+            <Check className="w-4 h-4 text-green-500" />
+          ) : (
+            <Copy className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+          )}
+        </button>
+      </div>
+      <div className="flex-1 p-6">
+        <pre className="bg-gray-900 rounded-xl p-4 text-sm overflow-x-auto font-mono h-full min-h-[200px]">
+          <code className="text-green-400">{formatSQL(sql)}</code>
+        </pre>
+      </div>
     </div>
   )
 }

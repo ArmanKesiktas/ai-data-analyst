@@ -72,7 +72,7 @@ export default function DataUploader({ onUploadSuccess }) {
                 onUploadSuccess(response.data)
             }
         } catch (err) {
-            console.error('Yükleme hatası:', err)
+            console.error('Upload error:', err)
             setError(err.response?.data?.detail || 'An error occurred while uploading the file')
         } finally {
             setUploading(false)

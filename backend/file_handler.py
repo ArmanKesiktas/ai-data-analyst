@@ -205,14 +205,29 @@ def upload_file(file_path: str, original_filename: str) -> dict:
 
 
 def get_all_tables() -> list:
-    """Veritabanındaki tüm tabloları listele"""
+    """List all tables in the database (excluding system tables)"""
     inspector = inspect(engine)
     tables = []
     
+    # System tables to hide from users
+    SYSTEM_TABLES = {
+        'users',  # Authentication table
+        '_column_metadata',
+        '_table_metadata', 
+        '_schema',
+        '_migrations',
+        'sqlite_sequence',
+        'alembic_version',
+    }
+    
     for table_name in inspector.get_table_names():
+        # Skip system tables (exact match or prefix match)
+        if table_name in SYSTEM_TABLES or table_name.startswith('_'):
+            continue
+            
         columns = inspector.get_columns(table_name)
         
-        # Satır sayısını al
+        # Get row count
         with engine.connect() as conn:
             result = conn.execute(text(f"SELECT COUNT(*) FROM {table_name}"))
             row_count = result.scalar()
