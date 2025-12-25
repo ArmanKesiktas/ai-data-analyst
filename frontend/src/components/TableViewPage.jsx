@@ -345,8 +345,44 @@ export default function TableViewPage({ activeTable, tables }) {
             {/* Table Container - Fixed height, horizontal scroll inside */}
             <div className="card flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
                 {loading ? (
-                    <div className="flex-1 flex items-center justify-center">
-                        <RefreshCw className="w-8 h-8 text-gray-500 animate-spin" />
+                    <div className="flex-1 overflow-x-scroll overflow-y-auto">
+                        <table className="border-collapse" style={{ minWidth: '100%', width: 'max-content' }}>
+                            <thead className="bg-gray-50 sticky top-0 z-10">
+                                <tr>
+                                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b whitespace-nowrap w-10">
+                                        #
+                                    </th>
+                                    {[...Array(visibleColumns.length || 5)].map((_, idx) => (
+                                        <th key={idx} className="px-2 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b">
+                                            <div className="skeleton-shimmer h-4 w-24 rounded"></div>
+                                        </th>
+                                    ))}
+                                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b sticky right-0 bg-gray-50 z-20 w-20">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {[...Array(10)].map((_, rowIdx) => (
+                                    <tr key={rowIdx}>
+                                        <td className="px-2 py-2 text-sm text-gray-400 whitespace-nowrap w-10">
+                                            <div className="skeleton-shimmer h-4 w-6 rounded"></div>
+                                        </td>
+                                        {[...Array(visibleColumns.length || 5)].map((_, colIdx) => (
+                                            <td key={colIdx} className="px-2 py-2 text-sm text-gray-700">
+                                                <div className="skeleton-shimmer h-4 w-32 rounded"></div>
+                                            </td>
+                                        ))}
+                                        <td className="px-2 py-2 text-sm sticky right-0 bg-white z-10 w-20">
+                                            <div className="flex items-center gap-1">
+                                                <div className="skeleton-shimmer h-6 w-6 rounded"></div>
+                                                <div className="skeleton-shimmer h-6 w-6 rounded"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 ) : (
                     <>

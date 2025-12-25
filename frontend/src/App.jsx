@@ -24,7 +24,8 @@ import { MessageSquare, Loader2, Database, ChevronDown } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-function App() {
+// Main app content component (uses WorkspaceContext)
+function AppContent() {
   const [loading, setLoading] = useState(false)
   const [response, setResponse] = useState(null)
   const [error, setError] = useState(null)
@@ -39,11 +40,20 @@ function App() {
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true) // For mobile responsive
   const [isMobile, setIsMobile] = useState(false)
-  const [showLanding, setShowLanding] = useState(true) // Show landing page first
   const [copyTableModal, setCopyTableModal] = useState({ isOpen: false, tableName: null, tableData: null })
 
   // Onboarding tour
   const { shouldRun: runOnboarding, completeOnboarding, resetOnboarding } = useOnboarding()
+
+  // Get current workspace
+  const { currentWorkspace } = useWorkspace()
+
+  // Clear dashboards when workspace changes
+  useEffect(() => {
+    setResponse(null)
+    setQueryHistory([])
+    setError(null)
+  }, [currentWorkspace?.id])
 
   // Detect mobile screen size
   useEffect(() => {
@@ -181,63 +191,9 @@ function App() {
 
   const currentTable = tables.find(t => t.name === activeTable)
 
-  // Get auth state
-  const { isAuthenticated, loading: authLoading } = useAuth()
-
-  // Show loading while checking auth
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 animate-spin text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show login page if not authenticated
-  if (!isAuthenticated) {
-    // Show landing page first, then login
-    if (showLanding) {
-      return <LandingPage onGetStarted={() => setShowLanding(false)} />
-    }
-    return <LoginPage onBack={() => setShowLanding(true)} />
-  }
-
-  // Mobile restriction - show "continue on desktop" message after login
-  if (isMobile) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-6">
-        <div className="text-center max-w-md">
-          <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
-            <Database className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-4">
-            Desktop Required
-          </h1>
-          <p className="text-gray-400 mb-6 leading-relaxed">
-            Quanty.Studio is optimized for desktop experience. Please continue on a computer for the best data analysis experience.
-          </p>
-          <div className="bg-gray-800/50 rounded-xl p-4 mb-6">
-            <p className="text-sm text-gray-500 mb-2">Logged in as:</p>
-            <p className="text-white font-medium">{user?.email}</p>
-          </div>
-          <button
-            onClick={logout}
-            className="text-gray-400 hover:text-white text-sm transition-colors"
-          >
-            Sign out
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <ThemeProvider>
-      <WorkspaceProvider>
-        <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <>
+      <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
           {/* Mobile Overlay */}
           {isMobile && sidebarOpen && (
             <div
@@ -323,7 +279,7 @@ function App() {
               onClose={closeCopyTableModal}
               tableName={copyTableModal.tableName}
               tableData={copyTableModal.tableData}
-              currentWorkspaceId={1} // This should come from WorkspaceContext
+              currentWorkspaceId={currentWorkspace?.id}
             />
 
             {/* Page Content */}
@@ -603,15 +559,90 @@ function App() {
               </main>
             )}
           </div>
+      </div>
+
+      {/* Modals */}
+      {showShortcuts && (
+        <KeyboardShortcutsModal onClose={() => setShowShortcuts(false)} />
+      )}
+
+      {/* Onboarding Tour */}
+      <OnboardingTour run={runOnboarding} onComplete={completeOnboarding} />
+    </>
+  )
+}
+
+// Outer App component with auth logic
+function App() {
+  const [showLanding, setShowLanding] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Get auth state
+  const { isAuthenticated, loading: authLoading, user, logout } = useAuth()
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 animate-spin text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500">Loading...</p>
         </div>
+      </div>
+    )
+  }
 
-        {/* Modals */}
-        {showShortcuts && (
-          <KeyboardShortcutsModal onClose={() => setShowShortcuts(false)} />
-        )}
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    if (showLanding) {
+      return <LandingPage onGetStarted={() => setShowLanding(false)} />
+    }
+    return <LoginPage onBack={() => setShowLanding(true)} />
+  }
 
-        {/* Onboarding Tour */}
-        <OnboardingTour run={runOnboarding} onComplete={completeOnboarding} />
+  // Mobile restriction - show "continue on desktop" message after login
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-6">
+        <div className="text-center max-w-md">
+          <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
+            <Database className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-4">
+            Desktop Required
+          </h1>
+          <p className="text-gray-400 mb-6 leading-relaxed">
+            Quanty.Studio is optimized for desktop experience. Please continue on a computer for the best data analysis experience.
+          </p>
+          <div className="bg-gray-800/50 rounded-xl p-4 mb-6">
+            <p className="text-sm text-gray-500 mb-2">Logged in as:</p>
+            <p className="text-white font-medium">{user?.email}</p>
+          </div>
+          <button
+            onClick={logout}
+            className="text-gray-400 hover:text-white text-sm transition-colors"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <ThemeProvider>
+      <WorkspaceProvider>
+        <AppContent />
       </WorkspaceProvider>
     </ThemeProvider>
   )

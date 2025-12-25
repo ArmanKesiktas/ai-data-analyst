@@ -66,21 +66,21 @@ export default function EnhancedProfileSettings({ onClose }) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+                <div className="px-6 py-4 flex items-center justify-between border-b border-gray-200">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                            <User className="w-5 h-5 text-white" />
+                        <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
+                            <User className="w-5 h-5 text-gray-600" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-semibold text-white">Account Settings</h2>
-                            <p className="text-sm text-blue-100">Manage your account preferences</p>
+                            <h2 className="text-lg font-semibold text-gray-800">Account Settings</h2>
+                            <p className="text-sm text-gray-500">Manage your account preferences</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white"
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                     >
-                        <X className="w-5 h-5" />
+                        <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
 
@@ -95,7 +95,7 @@ export default function EnhancedProfileSettings({ onClose }) {
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
                                         activeTab === tab.id
-                                            ? 'border-blue-500 text-blue-600'
+                                            ? 'border-gray-800 text-gray-900'
                                             : 'border-transparent text-gray-500 hover:text-gray-700'
                                     }`}
                                 >
@@ -217,7 +217,7 @@ export default function EnhancedProfileSettings({ onClose }) {
                             <div className="flex justify-end">
                                 <button
                                     type="submit"
-                                    className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+                                    className="px-6 py-2.5 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 transition-colors"
                                 >
                                     Save Changes
                                 </button>
@@ -358,7 +358,7 @@ export default function EnhancedProfileSettings({ onClose }) {
                             <div className="flex justify-end mt-6">
                                 <button
                                     onClick={handleSubmit}
-                                    className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+                                    className="px-6 py-2.5 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 transition-colors"
                                 >
                                     Save Preferences
                                 </button>
@@ -415,7 +415,7 @@ export default function EnhancedProfileSettings({ onClose }) {
                             <div className="flex justify-end">
                                 <button
                                     onClick={handleSubmit}
-                                    className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+                                    className="px-6 py-2.5 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 transition-colors"
                                 >
                                     Save Preferences
                                 </button>

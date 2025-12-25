@@ -12,10 +12,8 @@ export function ThemeProvider({ children }) {
         const saved = localStorage.getItem('theme')
         if (saved) return saved
 
-        // Check system preference
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            return 'dark'
-        }
+        // Default to light mode for better initial user experience
+        // Users can switch to dark mode from settings
         return 'light'
     })
 

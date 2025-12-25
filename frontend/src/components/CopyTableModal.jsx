@@ -68,20 +68,20 @@ export default function CopyTableModal({ isOpen, onClose, tableName, tableData, 
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 flex items-center justify-between">
+                <div className="px-6 py-4 flex items-center justify-between border-b border-gray-200">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                            <Copy className="w-5 h-5 text-white" />
+                        <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
+                            <Copy className="w-5 h-5 text-gray-600" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-semibold text-white">Copy Table</h2>
-                            <p className="text-sm text-blue-100">Choose destination workspace</p>
+                            <h2 className="text-lg font-semibold text-gray-800">Copy Table</h2>
+                            <p className="text-sm text-gray-500">Choose destination workspace</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
                         disabled={copying}
-                        className="text-white/80 hover:text-white transition-colors disabled:opacity-50"
+                        className="text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -132,7 +132,7 @@ export default function CopyTableModal({ isOpen, onClose, tableName, tableData, 
                                         disabled={copying}
                                         className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                                             selectedWorkspaceId === workspace.id
-                                                ? 'border-blue-500 bg-blue-50'
+                                                ? 'border-gray-800 bg-gray-50'
                                                 : 'border-gray-200 hover:border-gray-300 bg-white'
                                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                                     >
@@ -158,7 +158,7 @@ export default function CopyTableModal({ isOpen, onClose, tableName, tableData, 
                                             </div>
                                             {selectedWorkspaceId === workspace.id && (
                                                 <div className="ml-3">
-                                                    <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                                                    <div className="w-5 h-5 bg-gray-800 rounded-full flex items-center justify-center">
                                                         <Check className="w-3 h-3 text-white" />
                                                     </div>
                                                 </div>
@@ -182,7 +182,7 @@ export default function CopyTableModal({ isOpen, onClose, tableName, tableData, 
                         <button
                             onClick={handleCopy}
                             disabled={!selectedWorkspaceId || copying || copied || availableWorkspaces.length === 0}
-                            className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="flex-1 px-4 py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {copied ? (
                                 <>
@@ -204,8 +204,8 @@ export default function CopyTableModal({ isOpen, onClose, tableName, tableData, 
                     </div>
 
                     {/* Info Note */}
-                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-xs text-blue-700">
+                    <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                        <p className="text-xs text-gray-600">
                             <strong>Note:</strong> This will create a copy of the table structure and data in the selected workspace. The original table will remain unchanged.
                         </p>
                     </div>

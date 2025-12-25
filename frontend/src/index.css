@@ -95,11 +95,24 @@
     border: 1px solid #e5e7eb;
     outline: none;
     transition: all 0.2s;
+    background-color: white;
+    color: #111827;
+}
+
+.dark .search-input {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
 }
 
 .search-input:focus {
     border-color: #9ca3af;
     box-shadow: 0 0 0 2px rgba(156, 163, 175, 0.2);
+}
+
+.dark .search-input:focus {
+    border-color: #475569;
+    box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.3);
 }
 
 .badge {
@@ -114,9 +127,19 @@
     color: #1d4ed8;
 }
 
+.dark .badge-blue {
+    background-color: #1e3a8a;
+    color: #93c5fd;
+}
+
 .badge-green {
     background-color: #dcfce7;
     color: #15803d;
+}
+
+.dark .badge-green {
+    background-color: #14532d;
+    color: #86efac;
 }
 
 .badge-orange {
@@ -124,9 +147,19 @@
     color: #c2410c;
 }
 
+.dark .badge-orange {
+    background-color: #7c2d12;
+    color: #fdba74;
+}
+
 .kpi-icon-blue {
     background-color: #dbeafe;
     color: #3b82f6;
+}
+
+.dark .kpi-icon-blue {
+    background-color: #1e3a8a;
+    color: #60a5fa;
 }
 
 .kpi-icon-green {
@@ -134,14 +167,29 @@
     color: #22c55e;
 }
 
+.dark .kpi-icon-green {
+    background-color: #14532d;
+    color: #4ade80;
+}
+
 .kpi-icon-purple {
     background-color: #f3e8ff;
     color: #a855f7;
 }
 
+.dark .kpi-icon-purple {
+    background-color: #581c87;
+    color: #c084fc;
+}
+
 .kpi-icon-orange {
     background-color: #ffedd5;
     color: #f97316;
+}
+
+.dark .kpi-icon-orange {
+    background-color: #7c2d12;
+    color: #fb923c;
 }
 
 /* Animations */
@@ -199,6 +247,10 @@
     border-radius: 0.375rem;
 }
 
+.dark .skeleton-shimmer {
+    background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+}
+
 @keyframes skeleton-shimmer {
     0% {
         background-position: 200% 0;
@@ -207,4 +259,44 @@
     100% {
         background-position: -200% 0;
     }
+}
+
+/* Modal Dark Mode */
+.dark .modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.75);
+}
+
+/* Table Dark Mode */
+.dark table {
+    border-color: var(--border-color);
+}
+
+.dark th {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.dark td {
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+}
+
+.dark tr:hover td {
+    background-color: var(--bg-tertiary);
+}
+
+/* Chart Dark Mode */
+.dark .recharts-text {
+    fill: var(--text-secondary) !important;
+}
+
+.dark .recharts-cartesian-grid-horizontal line,
+.dark .recharts-cartesian-grid-vertical line {
+    stroke: var(--border-color) !important;
+}
+
+.dark .recharts-legend-item-text {
+    color: var(--text-secondary) !important;
 }
