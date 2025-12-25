@@ -20,6 +20,7 @@ import {
     ChevronLeft,
     ChevronRight as ChevronRightIcon
 } from 'lucide-react'
+import FloatingGradientOrb from './FloatingGradientOrb'
 
 export default function LandingPage({ onGetStarted }) {
     const [activeScreenshot, setActiveScreenshot] = useState(0)
@@ -137,8 +138,35 @@ export default function LandingPage({ onGetStarted }) {
             <section className="pt-32 pb-20 px-6 relative overflow-hidden">
                 {/* Background Gradient */}
                 <div className="absolute inset-0 bg-gradient-to-b from-gray-50 to-white -z-10"></div>
-                <div className="absolute top-20 left-1/4 w-96 h-96 bg-blue-100 rounded-full blur-3xl opacity-30 -z-10"></div>
-                <div className="absolute top-40 right-1/4 w-96 h-96 bg-purple-100 rounded-full blur-3xl opacity-30 -z-10"></div>
+
+                {/* Floating Gradient Orbs with Parallax Effect */}
+                <FloatingGradientOrb
+                    size={600}
+                    parallaxStrength={0.08}
+                    animationDuration={10}
+                    blur={140}
+                    opacity={0.35}
+                    colors={['#3b82f6', '#8b5cf6', '#ec4899']}
+                    className="top-20 left-1/4 -translate-x-1/2 -z-10"
+                />
+                <FloatingGradientOrb
+                    size={500}
+                    parallaxStrength={0.06}
+                    animationDuration={12}
+                    blur={120}
+                    opacity={0.3}
+                    colors={['#8b5cf6', '#ec4899', '#f59e0b']}
+                    className="top-40 right-1/4 translate-x-1/2 -z-10"
+                />
+                <FloatingGradientOrb
+                    size={400}
+                    parallaxStrength={0.04}
+                    animationDuration={15}
+                    blur={100}
+                    opacity={0.25}
+                    colors={['#10b981', '#3b82f6', '#8b5cf6']}
+                    className="bottom-20 left-1/3 -translate-x-1/2 -z-10"
+                />
 
                 {/* Data-inspired floating icons - visible on first view */}
                 <div className="absolute inset-0 -z-5 overflow-hidden pointer-events-none">
