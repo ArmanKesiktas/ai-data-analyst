@@ -189,6 +189,35 @@ function App() {
     return <LoginPage onBack={() => setShowLanding(true)} />
   }
 
+  // Mobile restriction - show "continue on desktop" message after login
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-6">
+        <div className="text-center max-w-md">
+          <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
+            <Database className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-4">
+            Desktop Required
+          </h1>
+          <p className="text-gray-400 mb-6 leading-relaxed">
+            Quanty.Studio is optimized for desktop experience. Please continue on a computer for the best data analysis experience.
+          </p>
+          <div className="bg-gray-800/50 rounded-xl p-4 mb-6">
+            <p className="text-sm text-gray-500 mb-2">Logged in as:</p>
+            <p className="text-white font-medium">{user?.email}</p>
+          </div>
+          <button
+            onClick={logout}
+            className="text-gray-400 hover:text-white text-sm transition-colors"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <ThemeProvider>
       <WorkspaceProvider>
