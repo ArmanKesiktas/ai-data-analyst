@@ -11,7 +11,12 @@ from sqlalchemy.orm import Session
 import os
 
 # JWT settings from environment
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "default-secret-key-change-in-production")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError(
+        "JWT_SECRET_KEY environment variable is required! "
+        "Generate a secure key with: openssl rand -hex 32"
+    )
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
 

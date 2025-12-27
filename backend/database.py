@@ -1,9 +1,10 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, Date, DateTime, text
+from sqlalchemy import create_engine, Column, Integer, String, Float, Date, DateTime, text, ForeignKey, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 import os
 from datetime import datetime, timedelta
 import random
+import secrets
 
 # Veritabanı bağlantısı
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sales.db")
@@ -33,6 +34,86 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     full_name = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    owned_workspaces = relationship("Workspace", back_populates="owner", foreign_keys="Workspace.owner_id")
+    workspace_memberships = relationship("WorkspaceMember", back_populates="user")
+    audit_logs = relationship("AuditLog", back_populates="user")
+
+
+class Workspace(Base):
+    """Workspace tablosu - Multi-tenant workspace management"""
+    __tablename__ = "workspaces"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
+
+    # Relationships
+    owner = relationship("User", back_populates="owned_workspaces", foreign_keys=[owner_id])
+    members = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")
+    invitations = relationship("WorkspaceInvitation", back_populates="workspace", cascade="all, delete-orphan")
+
+
+class WorkspaceMember(Base):
+    """Workspace üyeleri - Role-based access control"""
+    __tablename__ = "workspace_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    role = Column(String, nullable=False, default="viewer")  # owner, editor, viewer
+    joined_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    workspace = relationship("Workspace", back_populates="members")
+    user = relationship("User", back_populates="workspace_memberships")
+
+
+class WorkspaceInvitation(Base):
+    """Workspace davetleri - Email-based invitations"""
+    __tablename__ = "workspace_invitations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"), nullable=False)
+    email = Column(String, nullable=False, index=True)
+    role = Column(String, nullable=False, default="viewer")
+    token = Column(String, unique=True, nullable=False, index=True)
+    invited_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+    accepted_at = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True)
+
+    # Relationships
+    workspace = relationship("Workspace", back_populates="invitations")
+
+    @staticmethod
+    def generate_token():
+        """Generate a secure random invitation token"""
+        return secrets.token_urlsafe(32)
+
+
+class AuditLog(Base):
+    """Audit logging - Track all user actions"""
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(String, nullable=False)  # upload, analyze, delete_table, etc.
+    resource_type = Column(String, nullable=False)  # table, row, workspace, etc.
+    resource_id = Column(String, nullable=True)  # table_name, row_id, etc.
+    details = Column(Text, nullable=True)  # JSON string with additional details
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Relationships
+    user = relationship("User", back_populates="audit_logs")
 
 def get_db():
     """Veritabanı session oluştur"""

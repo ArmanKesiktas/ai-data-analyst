@@ -78,9 +78,15 @@ app = FastAPI(
 )
 
 # CORS middleware - Frontend'den erişim için
+# SECURITY: Only allow specific origins, never use wildcard "*" in production
+allowed_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,http://localhost:3000"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -266,12 +272,16 @@ def health_check():
         }
 
 @app.post("/api/upload")
-async def upload_data_file(file: UploadFile = File(...)):
+async def upload_data_file(
+    file: UploadFile = File(...),
+    current_user_id: int = Depends(get_current_user_id)
+):
     """
     CSV veya Excel dosyası yükle
-    
+
     - Maksimum dosya boyutu: 50 MB
     - Desteklenen formatlar: .csv, .xlsx, .xls
+    - Requires authentication - data will be associated with current user
     """
     try:
         # Dosya boyutu kontrolü
@@ -288,8 +298,8 @@ async def upload_data_file(file: UploadFile = File(...)):
             tmp_path = tmp.name
         
         try:
-            # Dosyayı işle
-            result = upload_file(tmp_path, file.filename)
+            # Dosyayı işle (user_id ile)
+            result = upload_file(tmp_path, file.filename, current_user_id)
             # Clear schema cache so AI can see the new table
             clear_schema_cache()
             return result
@@ -303,10 +313,14 @@ async def upload_data_file(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Dosya yükleme hatası: {str(e)}")
 
 @app.get("/api/tables")
-def list_tables():
-    """Veritabanındaki tüm tabloları listele"""
+def list_tables(current_user_id: int = Depends(get_current_user_id)):
+    """
+    Veritabanındaki kullanıcıya ait tabloları listele
+
+    SECURITY: Multi-tenant filtering - only shows tables with user's data
+    """
     try:
-        tables = get_all_tables()
+        tables = get_all_tables(user_id=current_user_id)
         return {
             "success": True,
             "tables": tables,
@@ -389,7 +403,8 @@ def remove_table(table_name: str):
 @app.post("/api/analyze", response_model=AnalyzeResponse)
 async def analyze_data(
     question: str = Form(...),
-    table_name: Optional[str] = Form(None)
+    table_name: Optional[str] = Form(None),
+    current_user_id: int = Depends(get_current_user_id)
 ):
     """
     Veri analizi endpoint'i
@@ -400,17 +415,32 @@ async def analyze_data(
     3. KPI'ları hesaplar
     4. Grafik konfigürasyonu belirler
     5. Sonuçları açıklar
-    
+
+    SECURITY: Requires authentication and validates table access
+
     Args:
         question: Kullanıcı sorusu
         table_name: Analiz edilecek tablo (opsiyonel, belirtilmezse tüm tablolar)
+        current_user_id: Authenticated user ID (injected by dependency)
     """
     try:
         print(f"\n🔍 Yeni analiz isteği: {question}")
         print(f"📊 Seçili tablo: {table_name or 'Tüm tablolar'}")
+        print(f"👤 Kullanıcı ID: {current_user_id}")
+
+        # SECURITY: Validate table access if specific table requested
+        if table_name:
+            from security import validate_table_access
+            try:
+                validate_table_access(table_name, current_user_id)
+            except ValueError as e:
+                raise HTTPException(
+                    status_code=403,
+                    detail=str(e)
+                )
 
         # 1. AI Engine ile SQL üret
-        ai_engine = AIEngine(table_name=table_name)
+        ai_engine = AIEngine(table_name=table_name, user_id=current_user_id)
         sql_query = ai_engine.generate_sql(question)
 
         if not sql_query:
@@ -712,16 +742,19 @@ async def get_changelog(table_name: Optional[str] = None, limit: int = 50):
 
 @app.get("/api/tables/{table_name}/rows")
 async def get_table_rows(
-    table_name: str, 
-    page: int = 0, 
+    table_name: str,
+    page: int = 0,
     page_size: int = 50,
     sort_by: Optional[str] = None,
     sort_order: str = "asc",
-    search: Optional[str] = None
+    search: Optional[str] = None,
+    current_user_id: int = Depends(get_current_user_id)
 ):
     """
     Get paginated rows from a table with server-side sorting and searching
-    
+
+    SECURITY: Multi-tenant filtering - only returns rows belonging to current user
+
     Args:
         table_name: Name of the table
         page: Page number (0-indexed)
@@ -729,14 +762,22 @@ async def get_table_rows(
         sort_by: Column name to sort by
         sort_order: 'asc' or 'desc'
         search: Search term to filter across all text columns
+        current_user_id: Authenticated user ID (injected by dependency)
     """
     from sqlalchemy import inspect
+    from security import validate_table_access
     import re
-    
+
     try:
+        # SECURITY: Validate table access
+        try:
+            validate_table_access(table_name, current_user_id)
+        except ValueError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+
         inspector = inspect(engine)
         table_names = inspector.get_table_names()
-        
+
         # Security: Validate table name exists
         if table_name not in table_names:
             raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
@@ -758,24 +799,34 @@ async def get_table_rows(
         offset = page * page_size
         
         with engine.connect() as conn:
-            # Build WHERE clause for search
-            where_clause = ""
+            # Build WHERE clause for search + multi-tenant filtering
+            where_conditions = []
             search_params = {}
-            
+
+            # SECURITY: Add user_id filter for multi-tenant isolation
+            if 'user_id' in valid_columns:
+                where_conditions.append("user_id = :current_user_id")
+                search_params["current_user_id"] = current_user_id
+
             if search and search.strip():
                 # Get text columns for searching
-                text_columns = [col["name"] for col in columns_info 
-                               if "TEXT" in str(col["type"]).upper() 
+                text_columns = [col["name"] for col in columns_info
+                               if "TEXT" in str(col["type"]).upper()
                                or "VARCHAR" in str(col["type"]).upper()
                                or "CHAR" in str(col["type"]).upper()]
-                
+
                 if text_columns:
-                    conditions = []
+                    search_conditions = []
                     for i, col in enumerate(text_columns):
                         param_name = f"search_{i}"
-                        conditions.append(f"{col} LIKE :{param_name}")
+                        search_conditions.append(f"{col} LIKE :{param_name}")
                         search_params[param_name] = f"%{search}%"
-                    where_clause = "WHERE " + " OR ".join(conditions)
+
+                    # Wrap search conditions in parentheses
+                    where_conditions.append("(" + " OR ".join(search_conditions) + ")")
+
+            # Build final WHERE clause
+            where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
             
             # Build ORDER BY clause
             order_clause = ""
@@ -820,62 +871,118 @@ async def get_table_rows(
 
 
 @app.post("/api/tables/{table_name}/rows")
-async def insert_row(table_name: str, row_data: dict):
-    """Insert a new row into a table"""
+async def insert_row(
+    table_name: str,
+    row_data: dict,
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """
+    Insert a new row into a table
+
+    SECURITY: Automatically adds user_id to ensure multi-tenant isolation
+    """
     from sqlalchemy import inspect
+    from security import validate_table_access
+
     try:
+        # SECURITY: Validate table access
+        try:
+            validate_table_access(table_name, current_user_id)
+        except ValueError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+
         inspector = inspect(engine)
         if table_name not in inspector.get_table_names():
             raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
-        
+
         if not row_data:
             raise HTTPException(status_code=400, detail="Row data cannot be empty")
-        
+
+        # SECURITY: Automatically add user_id to new rows
+        columns_info = inspector.get_columns(table_name)
+        column_names = [col["name"] for col in columns_info]
+
+        if 'user_id' in column_names:
+            row_data['user_id'] = current_user_id
+
         columns = list(row_data.keys())
         placeholders = ", ".join([f":{col}" for col in columns])
         columns_str = ", ".join(columns)
-        
+
         sql = f"INSERT INTO {table_name} ({columns_str}) VALUES ({placeholders})"
-        
+
         with engine.connect() as conn:
             result = conn.execute(text(sql), row_data)
             conn.commit()
             new_rowid = result.lastrowid
-        
+
         return {
             "success": True,
             "message": "Row inserted successfully",
             "rowid": new_rowid
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.put("/api/tables/{table_name}/rows/{rowid}")
-async def update_row(table_name: str, rowid: int, row_data: dict):
-    """Update an existing row"""
+async def update_row(
+    table_name: str,
+    rowid: int,
+    row_data: dict,
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """
+    Update an existing row
+
+    SECURITY: Only allows updating rows owned by current user
+    """
     from sqlalchemy import inspect
+    from security import validate_table_access
+
     try:
+        # SECURITY: Validate table access
+        try:
+            validate_table_access(table_name, current_user_id)
+        except ValueError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+
         inspector = inspect(engine)
         if table_name not in inspector.get_table_names():
             raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
-        
+
         if not row_data:
             raise HTTPException(status_code=400, detail="Row data cannot be empty")
-        
-        # Remove rowid from data if present
-        row_data = {k: v for k, v in row_data.items() if k != 'rowid'}
-        
+
+        # Remove rowid and user_id from data (prevent changing user_id!)
+        row_data = {k: v for k, v in row_data.items() if k not in ('rowid', 'user_id')}
+
+        # Get column info
+        columns_info = inspector.get_columns(table_name)
+        column_names = [col["name"] for col in columns_info]
+
         set_clause = ", ".join([f"{col} = :{col}" for col in row_data.keys()])
-        sql = f"UPDATE {table_name} SET {set_clause} WHERE rowid = :_rowid"
-        
+
+        # SECURITY: Add user_id filter to prevent updating other users' rows
+        if 'user_id' in column_names:
+            sql = f"UPDATE {table_name} SET {set_clause} WHERE rowid = :_rowid AND user_id = :_user_id"
+            params = {**row_data, "_rowid": rowid, "_user_id": current_user_id}
+        else:
+            sql = f"UPDATE {table_name} SET {set_clause} WHERE rowid = :_rowid"
+            params = {**row_data, "_rowid": rowid}
+
         with engine.connect() as conn:
-            result = conn.execute(text(sql), {**row_data, "_rowid": rowid})
+            result = conn.execute(text(sql), params)
             conn.commit()
-            
+
             if result.rowcount == 0:
-                raise HTTPException(status_code=404, detail=f"Row with rowid {rowid} not found")
-        
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Row with rowid {rowid} not found or you don't have permission to update it"
+                )
+
         return {
             "success": True,
             "message": "Row updated successfully",
@@ -888,21 +995,52 @@ async def update_row(table_name: str, rowid: int, row_data: dict):
 
 
 @app.delete("/api/tables/{table_name}/rows/{rowid}")
-async def delete_row(table_name: str, rowid: int):
-    """Delete a row from a table"""
+async def delete_row(
+    table_name: str,
+    rowid: int,
+    current_user_id: int = Depends(get_current_user_id)
+):
+    """
+    Delete a row from a table
+
+    SECURITY: Only allows deleting rows owned by current user
+    """
     from sqlalchemy import inspect
+    from security import validate_table_access
+
     try:
+        # SECURITY: Validate table access
+        try:
+            validate_table_access(table_name, current_user_id)
+        except ValueError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+
         inspector = inspect(engine)
         if table_name not in inspector.get_table_names():
             raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
-        
+
+        # Get column info
+        columns_info = inspector.get_columns(table_name)
+        column_names = [col["name"] for col in columns_info]
+
+        # SECURITY: Add user_id filter to prevent deleting other users' rows
+        if 'user_id' in column_names:
+            sql = f"DELETE FROM {table_name} WHERE rowid = :rowid AND user_id = :user_id"
+            params = {"rowid": rowid, "user_id": current_user_id}
+        else:
+            sql = f"DELETE FROM {table_name} WHERE rowid = :rowid"
+            params = {"rowid": rowid}
+
         with engine.connect() as conn:
-            result = conn.execute(text(f"DELETE FROM {table_name} WHERE rowid = :rowid"), {"rowid": rowid})
+            result = conn.execute(text(sql), params)
             conn.commit()
-            
+
             if result.rowcount == 0:
-                raise HTTPException(status_code=404, detail=f"Row with rowid {rowid} not found")
-        
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Row with rowid {rowid} not found or you don't have permission to delete it"
+                )
+
         return {
             "success": True,
             "message": "Row deleted successfully"

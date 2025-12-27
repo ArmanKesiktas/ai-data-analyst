@@ -64,14 +64,15 @@ def detect_column_types(df: pd.DataFrame) -> dict:
     return column_info
 
 
-def upload_file(file_path: str, original_filename: str) -> dict:
+def upload_file(file_path: str, original_filename: str, user_id: int) -> dict:
     """
     Dosyayı yükle ve veritabanına kaydet
-    
+
     Args:
         file_path: Geçici dosya yolu
         original_filename: Orijinal dosya adı
-    
+        user_id: Current authenticated user ID (for multi-tenant isolation)
+
     Returns:
         Yükleme sonucu bilgileri
     """
@@ -188,7 +189,10 @@ def upload_file(file_path: str, original_filename: str) -> dict:
     
     # Kolon tiplerini algıla
     column_info = detect_column_types(df)
-    
+
+    # Add user_id column for multi-tenant isolation
+    df['user_id'] = user_id
+
     # Veritabanına kaydet
     df.to_sql(table_name, engine, if_exists='replace', index=False)
     
@@ -204,40 +208,64 @@ def upload_file(file_path: str, original_filename: str) -> dict:
     }
 
 
-def get_all_tables() -> list:
-    """List all tables in the database (excluding system tables)"""
+def get_all_tables(user_id: int = None) -> list:
+    """
+    List all tables in the database (excluding system tables)
+
+    Args:
+        user_id: If provided, only return tables that contain data for this user (multi-tenant filtering)
+
+    Returns:
+        List of table metadata dictionaries
+    """
     inspector = inspect(engine)
     tables = []
-    
+
     # System tables to hide from users
     SYSTEM_TABLES = {
         'users',  # Authentication table
         '_column_metadata',
-        '_table_metadata', 
+        '_table_metadata',
         '_schema',
+        '_schema_changelog',
         '_migrations',
         'sqlite_sequence',
         'alembic_version',
     }
-    
+
     for table_name in inspector.get_table_names():
         # Skip system tables (exact match or prefix match)
         if table_name in SYSTEM_TABLES or table_name.startswith('_'):
             continue
-            
+
         columns = inspector.get_columns(table_name)
-        
-        # Get row count
+        column_names = [col["name"] for col in columns]
+
+        # SECURITY: Multi-tenant filtering
+        # If user_id is provided and table has user_id column, only count rows for this user
         with engine.connect() as conn:
-            result = conn.execute(text(f"SELECT COUNT(*) FROM {table_name}"))
-            row_count = result.scalar()
-        
+            if user_id is not None and 'user_id' in column_names:
+                # Count only rows belonging to this user
+                result = conn.execute(
+                    text(f"SELECT COUNT(*) FROM {table_name} WHERE user_id = :user_id"),
+                    {"user_id": user_id}
+                )
+                row_count = result.scalar()
+
+                # Skip tables where user has no data
+                if row_count == 0:
+                    continue
+            else:
+                # No multi-tenant filtering (for legacy tables or when user_id not provided)
+                result = conn.execute(text(f"SELECT COUNT(*) FROM {table_name}"))
+                row_count = result.scalar()
+
         tables.append({
             "name": table_name,
             "columns": [{"name": col["name"], "type": str(col["type"])} for col in columns],
             "row_count": row_count
         })
-    
+
     return tables
 
 

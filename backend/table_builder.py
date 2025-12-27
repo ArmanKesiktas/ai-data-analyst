@@ -118,7 +118,10 @@ def generate_create_sql(table_name: str, columns: list, add_auto_id: bool = True
     # Add auto ID if needed
     if add_auto_id and not has_primary_key:
         column_defs.append("id INTEGER PRIMARY KEY AUTOINCREMENT")
-    
+
+    # Add user_id for multi-tenant isolation (always add)
+    column_defs.append("user_id INTEGER NOT NULL")
+
     for col in columns:
         col_name = col["name"]
         col_type = TYPE_MAPPING.get(col["type"], "TEXT")
@@ -190,6 +193,14 @@ def create_table(table_name: str, columns: list, add_auto_id: bool = True) -> di
                 "nullable": False,
                 "is_primary_key": True
             })
+
+        # Add user_id to metadata (always present for multi-tenant isolation)
+        metadata_columns.insert(1 if (add_auto_id and not has_primary_key) else 0, {
+            "name": "user_id",
+            "type": "number",
+            "nullable": False,
+            "is_system_column": True  # Mark as system column, hidden from user
+        })
         
         save_table_metadata(table_name)
         save_column_metadata(table_name, metadata_columns)

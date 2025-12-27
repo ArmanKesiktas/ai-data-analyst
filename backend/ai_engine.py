@@ -19,12 +19,13 @@ def clear_schema_cache():
 class AIEngine:
     """Google Gemini API powered AI engine - Dynamic schema support"""
 
-    def __init__(self, table_name: str = None):
+    def __init__(self, table_name: str = None, user_id: int = None):
         """
         Initialize AI engine
-        
+
         Args:
             table_name: Table name to analyze (None for all tables)
+            user_id: Current user ID for multi-tenant filtering
         """
         api_key = os.getenv('GEMINI_API_KEY')
         if not api_key:
@@ -33,6 +34,7 @@ class AIEngine:
         self.client = genai.Client(api_key=api_key)
         self.model_name = 'gemini-2.0-flash'
         self.table_name = table_name
+        self.user_id = user_id
         # Use cached schema for better performance
         self.db_schema = get_cached_schema(table_name or "__all__")
 
@@ -106,12 +108,82 @@ SQL QUERY:"""
             if not sql_query.endswith(';'):
                 sql_query += ';'
 
+            # SECURITY: Add user_id filter for multi-tenant isolation
+            if self.user_id is not None:
+                sql_query = self._add_user_filter(sql_query)
+
             print(f"✅ SQL generated: {sql_query[:100]}...")
             return sql_query
 
         except Exception as e:
             print(f"❌ SQL generation error: {str(e)}")
             return None
+
+    def _add_user_filter(self, sql_query: str) -> str:
+        """
+        Add user_id filter to SQL query for multi-tenant isolation.
+
+        SECURITY: Ensures users can only access their own data.
+
+        Args:
+            sql_query: Original SQL query
+
+        Returns:
+            Modified SQL query with user_id filter
+        """
+        import re
+
+        # Remove trailing semicolon for modification
+        sql_query = sql_query.rstrip(';').strip()
+
+        # Check if query already has WHERE clause
+        where_match = re.search(r'\bWHERE\b', sql_query, re.IGNORECASE)
+
+        if where_match:
+            # Query has WHERE, add AND condition
+            # Insert before ORDER BY, GROUP BY, LIMIT, etc.
+            keywords = ['ORDER BY', 'GROUP BY', 'LIMIT', 'OFFSET', 'HAVING']
+            insertion_point = len(sql_query)
+
+            for keyword in keywords:
+                match = re.search(rf'\b{keyword}\b', sql_query, re.IGNORECASE)
+                if match:
+                    insertion_point = min(insertion_point, match.start())
+
+            # If WHERE is at the end, just append
+            if insertion_point == len(sql_query):
+                modified_query = f"{sql_query} AND user_id = {self.user_id}"
+            else:
+                modified_query = (
+                    sql_query[:insertion_point] +
+                    f" AND user_id = {self.user_id} " +
+                    sql_query[insertion_point:]
+                )
+        else:
+            # No WHERE clause, add one
+            # Find insertion point before ORDER BY, GROUP BY, etc.
+            keywords = ['ORDER BY', 'GROUP BY', 'LIMIT', 'OFFSET', 'HAVING']
+            insertion_point = len(sql_query)
+
+            for keyword in keywords:
+                match = re.search(rf'\b{keyword}\b', sql_query, re.IGNORECASE)
+                if match:
+                    insertion_point = min(insertion_point, match.start())
+
+            if insertion_point == len(sql_query):
+                modified_query = f"{sql_query} WHERE user_id = {self.user_id}"
+            else:
+                modified_query = (
+                    sql_query[:insertion_point] +
+                    f" WHERE user_id = {self.user_id} " +
+                    sql_query[insertion_point:]
+                )
+
+        # Add semicolon back
+        modified_query += ';'
+
+        print(f"🔒 Added user_id filter: user_id = {self.user_id}")
+        return modified_query
 
     def explain_results(self, question: str, query: str, results: list, kpis: dict) -> str:
         """
