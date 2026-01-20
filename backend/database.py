@@ -12,9 +12,33 @@ load_dotenv()
 
 # Veritabanı bağlantısı
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sales.db")
-# SQLite için check_same_thread gerekli, PostgreSQL için değil
-connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+
+# Connection arguments
+connect_args = {}
+engine_args = {}
+
+if "sqlite" in DATABASE_URL:
+    connect_args["check_same_thread"] = False
+else:
+    # PostgreSQL / Supabase config
+    # 1. SSL is mandatory for Supabase
+    if "sslmode" not in DATABASE_URL:
+        # Append sslmode=require if not present in URL
+        if "?" in DATABASE_URL:
+            DATABASE_URL += "&sslmode=require"
+        else:
+            DATABASE_URL += "?sslmode=require"
+    
+    # 2. Connection Pooling optimal settings for Render (serverless-like)
+    engine_args = {
+        "pool_size": 20,          # Base number of connections
+        "max_overflow": 10,       # Max extra connections during spikes
+        "pool_timeout": 30,       # Wait 30s before giving up
+        "pool_recycle": 1800,     # Recycle connections every 30 mins
+        "pool_pre_ping": True     # Verify connection before usage (prevents "server closed connection" errors)
+    }
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args, **engine_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
