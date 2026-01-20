@@ -75,13 +75,15 @@ Aşağıdaki değerleri not et (bunları Render'a gireceksin):
 "Environment" sekmesinde aşağıdakileri ekle:
 
 ```
-GEMINI_API_KEY=AIzaSyAlaQ5m0rUdDJ-TQtnkIFr3-A2D_JS4Nac
-DATABASE_URL=postgresql://postgres.dsonoqfpzbqpptoslddi:Aqbqcqdq07.@aws-1-eu-central-1.pooler.supabase.com:5432/postgres
-JWT_SECRET_KEY=89b7ab8924ac7a5e9750911f1a1e595cbb3b14d98e555e259efae261eb12bd4f
+GEMINI_API_KEY=<your-google-gemini-api-key>
+DATABASE_URL=<your-supabase-postgresql-connection-string>
+JWT_SECRET_KEY=<generate-with-openssl-rand-hex-32>
 JWT_ALGORITHM=HS256
 JWT_EXPIRATION_HOURS=24
-ALLOWED_ORIGINS=https://quanty-frontend.onrender.com
+ALLOWED_ORIGINS=https://your-frontend.onrender.com
 ```
+
+> ⚠️ **ÖNEMLİ:** Gerçek API key ve şifreleri asla Git'e commit etme! Bunları sadece Render Dashboard'dan gir.
 
 > ⚠️ **Güvenlik Notu:** `ALLOWED_ORIGINS` değerini frontend deploy olduktan sonra güncellemen gerekecek.
 
