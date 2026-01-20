@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import axios from 'axios'
+import { supabase } from '../lib/supabase'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -15,60 +16,80 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null)
-    const [token, setToken] = useState(localStorage.getItem('token'))
+    const [session, setSession] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
 
-    // Check if user is authenticated on mount
+    // Check session on mount and listen for auth changes
     useEffect(() => {
-        const checkAuth = async () => {
-            const savedToken = localStorage.getItem('token')
-            if (savedToken) {
-                try {
-                    const response = await axios.get(`${API_URL}/api/auth/me`, {
-                        headers: { Authorization: `Bearer ${savedToken}` }
+        // Get initial session
+        const initAuth = async () => {
+            try {
+                const { data: { session: currentSession } } = await supabase.auth.getSession()
+
+                if (currentSession) {
+                    setSession(currentSession)
+                    setUser({
+                        id: currentSession.user.id,
+                        email: currentSession.user.email,
+                        full_name: currentSession.user.user_metadata?.full_name || currentSession.user.email?.split('@')[0]
                     })
-                    setUser(response.data)
-                    setToken(savedToken)
-                } catch (err) {
-                    // Token is invalid or expired
-                    localStorage.removeItem('token')
-                    setToken(null)
-                    setUser(null)
+                    // Set axios default header for backend API calls
+                    axios.defaults.headers.common['Authorization'] = `Bearer ${currentSession.access_token}`
                 }
+            } catch (err) {
+                console.error('Auth init error:', err)
+            } finally {
+                setLoading(false)
             }
-            setLoading(false)
         }
 
-        checkAuth()
+        initAuth()
+
+        // Listen for auth state changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (event, currentSession) => {
+                console.log('Auth event:', event)
+
+                if (currentSession) {
+                    setSession(currentSession)
+                    setUser({
+                        id: currentSession.user.id,
+                        email: currentSession.user.email,
+                        full_name: currentSession.user.user_metadata?.full_name || currentSession.user.email?.split('@')[0]
+                    })
+                    axios.defaults.headers.common['Authorization'] = `Bearer ${currentSession.access_token}`
+                } else {
+                    setSession(null)
+                    setUser(null)
+                    delete axios.defaults.headers.common['Authorization']
+                }
+
+                setLoading(false)
+            }
+        )
+
+        return () => {
+            subscription?.unsubscribe()
+        }
     }, [])
-
-    // Set axios default header when token changes
-    useEffect(() => {
-        if (token) {
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-        } else {
-            delete axios.defaults.headers.common['Authorization']
-        }
-    }, [token])
 
     const login = async (email, password) => {
         setError(null)
         try {
-            const response = await axios.post(`${API_URL}/api/auth/login`, {
-                email,
+            const { data, error: authError } = await supabase.auth.signInWithPassword({
+                email: email.toLowerCase(),
                 password
             })
 
-            const { access_token, user: userData } = response.data
-
-            localStorage.setItem('token', access_token)
-            setToken(access_token)
-            setUser(userData)
+            if (authError) {
+                setError(authError.message)
+                return { success: false, error: authError.message }
+            }
 
             return { success: true }
         } catch (err) {
-            const message = err.response?.data?.detail || 'Login failed'
+            const message = err.message || 'Login failed'
             setError(message)
             return { success: false, error: message }
         }
@@ -77,36 +98,52 @@ export function AuthProvider({ children }) {
     const register = async (email, password, fullName) => {
         setError(null)
         try {
-            const response = await axios.post(`${API_URL}/api/auth/register`, {
-                email,
+            const { data, error: authError } = await supabase.auth.signUp({
+                email: email.toLowerCase(),
                 password,
-                full_name: fullName
+                options: {
+                    data: {
+                        full_name: fullName
+                    }
+                }
             })
 
-            const { access_token, user: userData } = response.data
+            if (authError) {
+                setError(authError.message)
+                return { success: false, error: authError.message }
+            }
 
-            localStorage.setItem('token', access_token)
-            setToken(access_token)
-            setUser(userData)
+            // Check if email confirmation is required
+            if (data.user && !data.session) {
+                return {
+                    success: true,
+                    message: 'Please check your email to confirm your account'
+                }
+            }
 
             return { success: true }
         } catch (err) {
-            const message = err.response?.data?.detail || 'Registration failed'
+            const message = err.message || 'Registration failed'
             setError(message)
             return { success: false, error: message }
         }
     }
 
-    const logout = () => {
-        localStorage.removeItem('token')
-        setToken(null)
-        setUser(null)
-        delete axios.defaults.headers.common['Authorization']
+    const logout = async () => {
+        try {
+            await supabase.auth.signOut()
+            setUser(null)
+            setSession(null)
+            delete axios.defaults.headers.common['Authorization']
+        } catch (err) {
+            console.error('Logout error:', err)
+        }
     }
 
     const value = {
         user,
-        token,
+        token: session?.access_token,
+        session,
         loading,
         error,
         isAuthenticated: !!user,

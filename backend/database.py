@@ -32,12 +32,13 @@ class Sale(Base):
 
 
 class User(Base):
-    """Kullanıcı tablosu"""
+    """Kullanıcı tablosu - synced with Supabase Auth"""
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
+    supabase_uid = Column(String, unique=True, index=True, nullable=True)  # Supabase Auth user ID
     email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
+    hashed_password = Column(String, nullable=True)  # Nullable - Supabase handles auth
     full_name = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 

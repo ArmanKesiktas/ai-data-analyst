@@ -12,7 +12,7 @@ from typing import Optional, List
 
 from models import AnalyzeRequest, AnalyzeResponse, ChartConfig, UserCreate, UserLogin, TokenResponse, UserResponse
 from database import User, SessionLocal, Base, engine as db_engine
-from auth import verify_password, get_password_hash, create_access_token, get_current_user_id, get_optional_user_id
+from auth import get_current_user_id, get_optional_user_id, decode_supabase_token_sync
 from ai_engine import AIEngine, clear_schema_cache
 from query_executor import QueryExecutor
 from kpi_calculator import calculate_kpis
@@ -134,93 +134,7 @@ def on_startup():
 
 # ========== AUTH ENDPOINTS ==========
 
-@app.post("/api/auth/register", response_model=TokenResponse)
-async def register(user_data: UserCreate):
-    """
-    Yeni kullanıcı kaydı
-    
-    - Email benzersiz olmalı
-    - Kayıt başarılı olursa JWT token döner
-    """
-    db = SessionLocal()
-    try:
-        # Check if email already exists
-        email = user_data.email.lower()
-        existing_user = db.query(User).filter(User.email == email).first()
-        if existing_user:
-            raise HTTPException(
-                status_code=400,
-                detail="This email is already registered"
-            )
-        
-        # Create new user
-        hashed_password = get_password_hash(user_data.password)
-        new_user = User(
-            email=email,
-            hashed_password=hashed_password,
-            full_name=user_data.full_name
-        )
-        
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        
-        # Generate token
-        access_token = create_access_token(data={"sub": str(new_user.id)})
-        
-        return TokenResponse(
-            access_token=access_token,
-            user=UserResponse(
-                id=new_user.id,
-                email=new_user.email,
-                full_name=new_user.full_name,
-                created_at=new_user.created_at
-            )
-        )
-    finally:
-        db.close()
 
-
-@app.post("/api/auth/login", response_model=TokenResponse)
-async def login(credentials: UserLogin):
-    """
-    Kullanıcı girişi
-    
-    - Email ve şifre doğrulaması yapar
-    - Başarılı olursa JWT token döner
-    """
-    db = SessionLocal()
-    try:
-        # Find user by email
-        user = db.query(User).filter(User.email == credentials.email.lower()).first()
-        
-        if not user:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid email or password"
-            )
-        
-        # Verify password
-        if not verify_password(credentials.password, user.hashed_password):
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid email or password"
-            )
-        
-        # Generate token
-        access_token = create_access_token(data={"sub": str(user.id)})
-        
-        return TokenResponse(
-            access_token=access_token,
-            user=UserResponse(
-                id=user.id,
-                email=user.email,
-                full_name=user.full_name,
-                created_at=user.created_at
-            )
-        )
-    finally:
-        db.close()
 
 
 @app.get("/api/auth/me", response_model=UserResponse)
