@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { Bell, User, ChevronDown, FolderOpen, Users, Settings, LogOut, Plus, Check, CheckCheck, Trash2, Moon, Sun, Menu, UserPlus } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import axios from 'axios'
+import { Bell, User, ChevronDown, FolderOpen, Users, Settings, LogOut, Plus, Check, CheckCheck, Trash2, Moon, Sun, Menu, UserPlus, Mail } from 'lucide-react'
 import { useWorkspace } from '../context/WorkspaceContext'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
@@ -8,6 +9,8 @@ import ProfileSettingsModal from './ProfileSettingsModal'
 import InviteToWorkspaceModal from './InviteToWorkspaceModal'
 import EnhancedProfileSettings from './EnhancedProfileSettings'
 import GeneralSettingsModal from './GeneralSettingsModal'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 // Theme Toggle Component
 function ThemeToggle() {
@@ -42,7 +45,10 @@ export default function Header({ onMenuClick }) {
         markAsRead,
         markAllAsRead,
         clearNotifications,
-        profile
+        profile,
+        pendingInvitations,
+        acceptInvitation,
+        fetchPendingInvitations
     } = useWorkspace()
 
     const { user, logout } = useAuth()
@@ -56,6 +62,18 @@ export default function Header({ onMenuClick }) {
     const [showEnhancedSettings, setShowEnhancedSettings] = useState(false)
     const [showGeneralSettings, setShowGeneralSettings] = useState(false)
 
+    // Fetch invitations on mount and when user changes
+    useEffect(() => {
+        if (user) {
+            fetchPendingInvitations()
+        }
+    }, [user])
+
+    // Accept invitation handler
+    const handleAcceptInvitation = async (token) => {
+        await acceptInvitation(token)
+    }
+
     const formatTime = (isoString) => {
         const date = new Date(isoString)
         const now = new Date()
@@ -66,6 +84,9 @@ export default function Header({ onMenuClick }) {
         if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
         return date.toLocaleDateString()
     }
+
+    // Total badge count includes invitations
+    const totalBadgeCount = unreadCount + (pendingInvitations?.length || 0)
 
     return (
         <>
@@ -173,9 +194,9 @@ export default function Header({ onMenuClick }) {
                             className="p-2 hover:bg-gray-100 rounded-lg relative"
                         >
                             <Bell className="w-5 h-5 text-gray-500" />
-                            {unreadCount > 0 && (
+                            {totalBadgeCount > 0 && (
                                 <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center">
-                                    {unreadCount}
+                                    {totalBadgeCount}
                                 </span>
                             )}
                         </button>
@@ -205,12 +226,41 @@ export default function Header({ onMenuClick }) {
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Pending Invitations Section */}
+                                    {pendingInvitations.length > 0 && (
+                                        <div className="border-b border-gray-100">
+                                            <p className="text-xs text-gray-400 px-3 pt-2 pb-1 font-medium">Workspace Invitations</p>
+                                            {pendingInvitations.map(inv => (
+                                                <div key={inv.id} className="p-3 bg-blue-50/50 hover:bg-blue-50 transition-colors">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <Mail className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                                                                <p className="text-sm font-medium text-gray-800 truncate">{inv.workspace_name}</p>
+                                                            </div>
+                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                Role: <span className="capitalize">{inv.role}</span> • From: {inv.invited_by}
+                                                            </p>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleAcceptInvitation(inv.token)}
+                                                            className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded-lg transition-colors flex-shrink-0"
+                                                        >
+                                                            Accept
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
                                     <div className="max-h-64 overflow-auto">
-                                        {notifications.length === 0 ? (
+                                        {notifications.length === 0 && pendingInvitations.length === 0 ? (
                                             <div className="p-6 text-center text-gray-400 text-sm">
                                                 No notifications yet
                                             </div>
-                                        ) : (
+                                        ) : notifications.length === 0 ? null : (
                                             notifications.map(notif => (
                                                 <div
                                                     key={notif.id}

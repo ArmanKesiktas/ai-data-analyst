@@ -40,6 +40,9 @@ from metadata import (
     get_schema_changelog
 )
 
+# Import workspace router
+from workspace_endpoints import router as workspace_router
+
 
 # Pydantic models for Table Builder API
 class ColumnDefinition(BaseModel):
@@ -92,6 +95,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include workspace router
+app.include_router(workspace_router)
+
 # Rate limiting için basit sayaç
 request_counts = defaultdict(list)
 RATE_LIMIT = 10
@@ -113,6 +119,16 @@ def check_rate_limit(ip: str) -> bool:
 def on_startup():
     """Create database tables on startup"""
     Base.metadata.create_all(bind=db_engine)
+    
+    # Log database connection info (masked)
+    db_url = os.getenv("DATABASE_URL", "sqlite:///./sales.db")
+    if "postgresql" in db_url:
+        print("✅ Connected to PostgreSQL (Supabase)")
+    elif "sqlite" in db_url:
+        print("⚠️  Connected to SQLite (Local)")
+    else:
+        print(f"ℹ️  Connected to: {db_url.split(':')[0]}://...")
+        
     print("✅ Database tables initialized (including users)")
 
 
@@ -129,7 +145,8 @@ async def register(user_data: UserCreate):
     db = SessionLocal()
     try:
         # Check if email already exists
-        existing_user = db.query(User).filter(User.email == user_data.email).first()
+        email = user_data.email.lower()
+        existing_user = db.query(User).filter(User.email == email).first()
         if existing_user:
             raise HTTPException(
                 status_code=400,
@@ -139,7 +156,7 @@ async def register(user_data: UserCreate):
         # Create new user
         hashed_password = get_password_hash(user_data.password)
         new_user = User(
-            email=user_data.email,
+            email=email,
             hashed_password=hashed_password,
             full_name=user_data.full_name
         )
@@ -175,7 +192,7 @@ async def login(credentials: UserLogin):
     db = SessionLocal()
     try:
         # Find user by email
-        user = db.query(User).filter(User.email == credentials.email).first()
+        user = db.query(User).filter(User.email == credentials.email.lower()).first()
         
         if not user:
             raise HTTPException(

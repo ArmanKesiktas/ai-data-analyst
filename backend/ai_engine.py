@@ -3,6 +3,11 @@ import os
 from functools import lru_cache
 from file_handler import get_dynamic_schema
 
+# Check database type for SQL syntax
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sales.db")
+IS_POSTGRES = "postgresql" in DATABASE_URL
+DB_TYPE = "PostgreSQL" if IS_POSTGRES else "SQLite"
+
 # Cache for schema - avoids repeated database calls
 @lru_cache(maxsize=50)
 def get_cached_schema(table_name: str) -> str:
@@ -65,7 +70,7 @@ RULES:
 - Use GROUP BY for category/group based data
 - Use ORDER BY for sorting
 - Only write SELECT queries
-- Use SQLite syntax
+- Use {DB_TYPE} syntax
 
 IMPORTANT: Look at the sample data in the schema to understand data types and values.
 

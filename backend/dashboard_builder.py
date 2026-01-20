@@ -7,6 +7,11 @@ import json
 import re
 from file_handler import get_dynamic_schema, get_table_preview
 
+# Check database type for SQL syntax
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sales.db")
+IS_POSTGRES = "postgresql" in DATABASE_URL
+DB_TYPE = "PostgreSQL" if IS_POSTGRES else "SQLite"
+
 class DashboardBuilder:
     """AI-powered dashboard builder"""
 
@@ -48,7 +53,9 @@ class DashboardBuilder:
             return column_info
         
         DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sales.db")
-        engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
+        # SQLite için check_same_thread gerekli, PostgreSQL için değil
+        connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+        engine = create_engine(DATABASE_URL, connect_args=connect_args)
         
         try:
             inspector = inspect(engine)
@@ -182,7 +189,7 @@ OUTPUT FORMAT (JSON only, do not write anything else):
       "title": "Widget title",
       "type": "kpi|bar_chart|line_chart|pie_chart|area_chart|table",
       "size": "small|medium|large|full",
-      "sql": "SELECT ... FROM {self.table_name} (in SQLite format)",
+      "sql": "SELECT ... FROM {self.table_name} (in {DB_TYPE} format)",
       "x_axis": "x axis column (for charts)",
       "y_axis": "y axis column (for charts)",
       "color": "blue|green|purple|orange",
@@ -195,7 +202,7 @@ OUTPUT FORMAT (JSON only, do not write anything else):
 RULES:
 1. Use only SELECT in SQL queries
 2. Table name: {self.table_name}
-3. Use SQLite syntax
+3. Use {DB_TYPE} syntax
 4. Write realistic SQL queries for each widget
 5. Return only JSON, do not add explanation
 6. Include EVERY element the user requested

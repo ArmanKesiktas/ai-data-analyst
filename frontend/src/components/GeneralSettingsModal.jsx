@@ -1,6 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import axios from 'axios'
 import { X, Settings, Trash2, Users, Database, Download, Upload, AlertTriangle, Check } from 'lucide-react'
 import { useWorkspace } from '../context/WorkspaceContext'
+import { useAuth } from '../context/AuthContext'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 /**
  * GeneralSettingsModal - Workspace general settings
@@ -12,6 +16,7 @@ import { useWorkspace } from '../context/WorkspaceContext'
  * - Danger zone
  */
 export default function GeneralSettingsModal({ onClose }) {
+    const { user } = useAuth()
     const {
         currentWorkspace,
         workspaces,
@@ -24,6 +29,32 @@ export default function GeneralSettingsModal({ onClose }) {
     const [workspaceName, setWorkspaceName] = useState(currentWorkspace.name)
     const [deleteConfirm, setDeleteConfirm] = useState('')
     const [saved, setSaved] = useState(false)
+    const [membersList, setMembersList] = useState([])
+    const [loadingMembers, setLoadingMembers] = useState(false)
+
+    // Fetch members when tab is active
+    useEffect(() => {
+        if (activeTab === 'members' && currentWorkspace) {
+            fetchMembers()
+        }
+    }, [activeTab, currentWorkspace])
+
+    const fetchMembers = async () => {
+        setLoadingMembers(true)
+        try {
+            const token = localStorage.getItem('token') || localStorage.getItem('access_token')
+            const response = await axios.get(
+                `${API_URL}/api/workspaces/${currentWorkspace.id}/members`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            )
+            setMembersList(response.data)
+        } catch (error) {
+            console.error('Error fetching members:', error)
+            addNotification('Failed to load members', 'error')
+        } finally {
+            setLoadingMembers(false)
+        }
+    }
 
     const tabs = [
         { id: 'general', label: 'General', icon: Settings },
@@ -67,8 +98,6 @@ export default function GeneralSettingsModal({ onClose }) {
         addNotification('Workspace data exported successfully', 'success')
     }
 
-    const members = currentWorkspace.members || []
-
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
@@ -100,11 +129,10 @@ export default function GeneralSettingsModal({ onClose }) {
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
-                                        activeTab === tab.id
-                                            ? 'border-gray-800 text-gray-900'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700'
-                                    }`}
+                                    className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${activeTab === tab.id
+                                        ? 'border-gray-800 text-gray-900'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                                        }`}
                                 >
                                     <Icon className="w-4 h-4" />
                                     <span className="font-medium">{tab.label}</span>
@@ -164,7 +192,7 @@ export default function GeneralSettingsModal({ onClose }) {
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-600">Members</span>
-                                        <span className="font-medium text-gray-900">{members.length + 1}</span>
+                                        <span className="font-medium text-gray-900">{membersList.length}</span>
                                     </div>
                                 </div>
                             </div>
@@ -174,27 +202,14 @@ export default function GeneralSettingsModal({ onClose }) {
                     {/* Members Tab */}
                     {activeTab === 'members' && (
                         <div className="space-y-4">
-                            {/* Owner */}
-                            <div className="p-4 border-2 border-gray-200 rounded-xl">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                                            <Users className="w-5 h-5 text-purple-600" />
-                                        </div>
-                                        <div>
-                                            <div className="font-medium text-gray-900">You (Owner)</div>
-                                            <div className="text-sm text-gray-500">Full access to workspace</div>
-                                        </div>
-                                    </div>
-                                    <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
-                                        Owner
-                                    </span>
-                                </div>
-                            </div>
-
                             {/* Members */}
-                            {members.length > 0 ? (
-                                members.map((member, index) => (
+                            {loadingMembers ? (
+                                <div className="text-center py-12">
+                                    <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-800 rounded-full animate-spin mx-auto mb-2" />
+                                    <p className="text-gray-500">Loading members...</p>
+                                </div>
+                            ) : membersList.length > 0 ? (
+                                membersList.map((member, index) => (
                                     <div key={index} className="p-4 border-2 border-gray-200 rounded-xl">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
@@ -202,21 +217,24 @@ export default function GeneralSettingsModal({ onClose }) {
                                                     <Users className="w-5 h-5 text-blue-600" />
                                                 </div>
                                                 <div>
-                                                    <div className="font-medium text-gray-900">{member.email}</div>
-                                                    <div className="text-sm text-gray-500">
-                                                        Joined {new Date(member.joinedAt).toLocaleDateString()}
+                                                    <div className="font-medium text-gray-900">
+                                                        {member.full_name}
+                                                        {user?.id === member.user_id && <span className="ml-2 text-xs text-blue-600">(You)</span>}
+                                                        {member.role === 'owner' && <span className="ml-2 text-xs text-gray-500">(Owner)</span>}
                                                     </div>
+                                                    <div className="text-sm text-gray-500">{member.email}</div>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                                                    member.role === 'editor'
+                                                <span className={`px-3 py-1 text-xs font-medium rounded-full ${member.role === 'owner'
+                                                    ? 'bg-purple-100 text-purple-700'
+                                                    : member.role === 'editor'
                                                         ? 'bg-blue-100 text-blue-700'
                                                         : 'bg-gray-100 text-gray-700'
-                                                }`}>
+                                                    }`}>
                                                     {member.role}
                                                 </span>
-                                                {currentWorkspace.role === 'owner' && (
+                                                {currentWorkspace.role === 'owner' && member.role !== 'owner' && (
                                                     <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
@@ -230,8 +248,7 @@ export default function GeneralSettingsModal({ onClose }) {
                                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                                         <Users className="w-8 h-8 text-gray-400" />
                                     </div>
-                                    <p className="text-gray-500">No members yet</p>
-                                    <p className="text-sm text-gray-400 mt-1">Invite team members to collaborate</p>
+                                    <p className="text-gray-500">No members found</p>
                                 </div>
                             )}
                         </div>

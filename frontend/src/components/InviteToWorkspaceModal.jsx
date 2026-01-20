@@ -1,24 +1,43 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import axios from 'axios'
 import { X, Mail, UserPlus, Check, Copy as CopyIcon, Users, Shield, Eye } from 'lucide-react'
 import { useWorkspace } from '../context/WorkspaceContext'
 
-/**
- * InviteToWorkspaceModal - Modal for inviting users to workspace
- *
- * Features:
- * - Email invitation with role selection
- * - Share link generation
- * - Pending invitations list
- * - Role-based access control
- */
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 export default function InviteToWorkspaceModal({ isOpen, onClose }) {
-    const { currentWorkspace, inviteToWorkspace, pendingInvitations = [], cancelInvitation } = useWorkspace()
+    const { currentWorkspace, inviteToWorkspace } = useWorkspace()
     const [email, setEmail] = useState('')
     const [role, setRole] = useState('viewer')
     const [inviting, setInviting] = useState(false)
     const [invited, setInvited] = useState(false)
     const [shareLink, setShareLink] = useState('')
     const [linkCopied, setLinkCopied] = useState(false)
+
+    // Outgoing invitations for this workspace
+    const [outgoingInvitations, setOutgoingInvitations] = useState([])
+
+    useEffect(() => {
+        if (isOpen && currentWorkspace) {
+            fetchOutgoingInvitations()
+        }
+    }, [isOpen, currentWorkspace])
+
+    const fetchOutgoingInvitations = async () => {
+        try {
+            // Check if we have auth token
+            const token = localStorage.getItem('token') || localStorage.getItem('access_token')
+            if (!token) return
+
+            const response = await axios.get(
+                `${API_URL}/api/workspaces/${currentWorkspace.id}/invitations`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            )
+            setOutgoingInvitations(response.data)
+        } catch (error) {
+            console.error('Failed to fetch outgoing invitations:', error)
+        }
+    }
 
     if (!isOpen) return null
 
@@ -30,21 +49,29 @@ export default function InviteToWorkspaceModal({ isOpen, onClose }) {
         setInviting(true)
 
         try {
-            await new Promise(resolve => setTimeout(resolve, 500))
+            // Call API via Context
+            const result = await inviteToWorkspace(currentWorkspace.id, email, role)
 
-            // Generate invite link
-            const inviteToken = Math.random().toString(36).substring(2, 15)
-            const link = `${window.location.origin}/join/${inviteToken}`
+            if (result) {
+                // Use REAL token from backend
+                const inviteToken = result.token
+                const link = `${window.location.origin}/join/${inviteToken}` // This route needs to exist in frontend
 
-            inviteToWorkspace(currentWorkspace.id, email, role, inviteToken)
+                // Or if no /join route, maybe just show the token?
+                // The plan mentioned adding "accept" button in UI, so usually no need for external link unless sharing via chat.
+                // Assuming share link is still desired.
 
-            setShareLink(link)
-            setInvited(true)
-            setEmail('')
+                setShareLink(link)
+                setInvited(true)
+                setEmail('')
 
-            setTimeout(() => {
-                setInvited(false)
-            }, 3000)
+                // Refresh list
+                fetchOutgoingInvitations()
+
+                setTimeout(() => {
+                    setInvited(false)
+                }, 3000)
+            }
 
         } catch (error) {
             console.error('Failed to send invitation:', error)
@@ -144,11 +171,10 @@ export default function InviteToWorkspaceModal({ isOpen, onClose }) {
                                                 type="button"
                                                 onClick={() => setRole(option.value)}
                                                 disabled={inviting}
-                                                className={`p-4 border-2 rounded-xl text-left transition-all ${
-                                                    role === option.value
+                                                className={`p-4 border-2 rounded-xl text-left transition-all ${role === option.value
                                                         ? 'border-gray-800 bg-gray-50'
                                                         : 'border-gray-200 hover:border-gray-300 bg-white'
-                                                } disabled:opacity-50`}
+                                                    } disabled:opacity-50`}
                                             >
                                                 <div className="flex items-start justify-between">
                                                     <div className="flex items-start gap-3">
@@ -181,7 +207,7 @@ export default function InviteToWorkspaceModal({ isOpen, onClose }) {
                                     <div className="flex-1">
                                         <div className="font-medium text-green-900">Invitation sent!</div>
                                         <div className="text-sm text-green-700 mt-1">
-                                            An email has been sent with instructions to join the workspace.
+                                            User can accept the invitation from their dashboard notifications.
                                         </div>
                                     </div>
                                 </div>
@@ -190,8 +216,8 @@ export default function InviteToWorkspaceModal({ isOpen, onClose }) {
 
                         {/* Share Link */}
                         {shareLink && (
-                            <div className="mt-4 p-4 bg-gray-50 border-2 border-gray-200 rounded-xl">
-                                <div className="text-sm font-medium text-gray-700 mb-2">Share Link</div>
+                            <div className="mt-4 p-4 bg-gray-50 border-2 border-green-200 rounded-xl">
+                                <div className="text-sm font-medium text-gray-700 mb-2">Manually Share Token/Link</div>
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
@@ -250,11 +276,11 @@ export default function InviteToWorkspaceModal({ isOpen, onClose }) {
                     </form>
 
                     {/* Pending Invitations */}
-                    {pendingInvitations.length > 0 && (
+                    {outgoingInvitations.length > 0 && (
                         <div className="border-t pt-6">
-                            <h3 className="font-medium text-gray-900 mb-4">Pending Invitations</h3>
+                            <h3 className="font-medium text-gray-900 mb-4">Pending Invitations (Sent)</h3>
                             <div className="space-y-2">
-                                {pendingInvitations.map((invitation) => (
+                                {outgoingInvitations.map((invitation) => (
                                     <div
                                         key={invitation.id}
                                         className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
@@ -266,16 +292,14 @@ export default function InviteToWorkspaceModal({ isOpen, onClose }) {
                                             <div>
                                                 <div className="font-medium text-gray-900">{invitation.email}</div>
                                                 <div className="text-sm text-gray-500">
-                                                    Role: {invitation.role} • Sent {new Date(invitation.sentAt).toLocaleDateString()}
+                                                    Role: {invitation.role} • Sent {new Date(invitation.created_at).toLocaleDateString()}
                                                 </div>
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={() => cancelInvitation(invitation.id)}
-                                            className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                        >
-                                            Cancel
-                                        </button>
+                                        {/* Cancel functionality is not yet implemented in WorkspaceContext, keep it simple UI for now */}
+                                        <div className="text-xs text-gray-400">
+                                            Pending
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -285,8 +309,7 @@ export default function InviteToWorkspaceModal({ isOpen, onClose }) {
                     {/* Info Note */}
                     <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-xl">
                         <p className="text-xs text-gray-600">
-                            <strong>Note:</strong> Invited users will receive an email with a link to join this workspace.
-                            They can accept the invitation within 7 days. You can manage workspace members in the workspace settings.
+                            <strong>Note:</strong> Since email service is not configured, the user must log in to their dashboard to see the invitation, or you can copy and share the link manually.
                         </p>
                     </div>
                 </div>

@@ -10,52 +10,102 @@ from datetime import datetime
 import os
 import json
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sales.db")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
+# SQLite için check_same_thread gerekli, PostgreSQL için değil
+connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
+
+# PostgreSQL mi SQLite mi kontrol et
+IS_POSTGRES = "postgresql" in DATABASE_URL
 
 
 def init_metadata_tables():
     """Create metadata tables if they don't exist"""
     with engine.connect() as conn:
         # Table metadata
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS _table_metadata (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                table_name TEXT NOT NULL UNIQUE,
-                display_name TEXT,
-                is_visible INTEGER DEFAULT 1,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        """))
+        # PostgreSQL uses SERIAL, SQLite uses AUTOINCREMENT
+        if IS_POSTGRES:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS _table_metadata (
+                    id SERIAL PRIMARY KEY,
+                    table_name TEXT NOT NULL UNIQUE,
+                    display_name TEXT,
+                    is_visible INTEGER DEFAULT 1,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+        else:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS _table_metadata (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    table_name TEXT NOT NULL UNIQUE,
+                    display_name TEXT,
+                    is_visible INTEGER DEFAULT 1,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
         
         # Column metadata
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS _column_metadata (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                table_name TEXT NOT NULL,
-                column_name TEXT NOT NULL,
-                data_type TEXT NOT NULL,
-                is_nullable INTEGER DEFAULT 1,
-                is_primary_key INTEGER DEFAULT 0,
-                is_visible INTEGER DEFAULT 1,
-                display_order INTEGER DEFAULT 0,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(table_name, column_name)
-            )
-        """))
+        if IS_POSTGRES:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS _column_metadata (
+                    id SERIAL PRIMARY KEY,
+                    table_name TEXT NOT NULL,
+                    column_name TEXT NOT NULL,
+                    data_type TEXT NOT NULL,
+                    is_nullable INTEGER DEFAULT 1,
+                    is_primary_key INTEGER DEFAULT 0,
+                    is_visible INTEGER DEFAULT 1,
+                    display_order INTEGER DEFAULT 0,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(table_name, column_name)
+                )
+            """))
+        else:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS _column_metadata (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    table_name TEXT NOT NULL,
+                    column_name TEXT NOT NULL,
+                    data_type TEXT NOT NULL,
+                    is_nullable INTEGER DEFAULT 1,
+                    is_primary_key INTEGER DEFAULT 0,
+                    is_visible INTEGER DEFAULT 1,
+                    display_order INTEGER DEFAULT 0,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(table_name, column_name)
+                )
+            """))
         
         # Schema changelog
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS _schema_changelog (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                table_name TEXT NOT NULL,
-                action TEXT NOT NULL,
-                details TEXT,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        """))
+        if IS_POSTGRES:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS _schema_changelog (
+                    id SERIAL PRIMARY KEY,
+                    table_name TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    details TEXT,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+        else:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS _schema_changelog (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    table_name TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    details TEXT,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
         
         conn.commit()
     

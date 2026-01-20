@@ -66,6 +66,46 @@ async def list_workspaces(
     return workspaces
 
 
+@router.get("/my-invitations")
+async def get_my_invitations(
+    current_user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """Get pending invitations for the current user"""
+    from database import User, WorkspaceInvitation, Workspace
+    from datetime import datetime
+    
+    # Get current user's email
+    user = db.query(User).filter(User.id == current_user_id).first()
+    if not user:
+        return []
+    
+    # Find pending invitations for this email
+    invitations = db.query(WorkspaceInvitation).filter(
+        WorkspaceInvitation.email == user.email,
+        WorkspaceInvitation.is_active == True,
+        WorkspaceInvitation.accepted_at == None,
+        WorkspaceInvitation.expires_at > datetime.utcnow()
+    ).all()
+    
+    result = []
+    for inv in invitations:
+        workspace = db.query(Workspace).filter(Workspace.id == inv.workspace_id).first()
+        inviter = db.query(User).filter(User.id == inv.invited_by).first()
+        result.append({
+            "id": inv.id,
+            "workspace_id": inv.workspace_id,
+            "workspace_name": workspace.name if workspace else "Unknown",
+            "role": inv.role,
+            "token": inv.token,
+            "invited_by": inviter.full_name if inviter else "Unknown",
+            "created_at": inv.created_at.isoformat(),
+            "expires_at": inv.expires_at.isoformat()
+        })
+    
+    return result
+
+
 @router.get("/{workspace_id}", response_model=WorkspaceResponse)
 async def get_workspace(
     workspace_id: int,
@@ -209,7 +249,7 @@ async def create_invitation(
         db=db,
         workspace_id=workspace_id,
         user_id=current_user_id,
-        email=invite_data.email,
+        email=invite_data.email.lower(),
         role=invite_data.role
     )
 
@@ -226,6 +266,7 @@ async def create_invitation(
         "id": invitation.id,
         "email": invitation.email,
         "role": invitation.role,
+        "token": invitation.token,  # Return token for manual sharing
         "invited_by": inviter.full_name if inviter else "Unknown",
         "created_at": invitation.created_at.isoformat(),
         "expires_at": invitation.expires_at.isoformat()

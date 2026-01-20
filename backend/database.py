@@ -6,9 +6,15 @@ from datetime import datetime, timedelta
 import random
 import secrets
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 # Veritabanı bağlantısı
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sales.db")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
+# SQLite için check_same_thread gerekli, PostgreSQL için değil
+connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

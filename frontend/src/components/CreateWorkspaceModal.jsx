@@ -6,8 +6,9 @@ export default function CreateWorkspaceModal({ onClose }) {
     const { createWorkspace } = useWorkspace()
     const [name, setName] = useState('')
     const [error, setError] = useState('')
+    const [isLoading, setIsLoading] = useState(false)
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
 
         if (!name.trim()) {
@@ -20,8 +21,13 @@ export default function CreateWorkspaceModal({ onClose }) {
             return
         }
 
-        createWorkspace(name.trim())
-        onClose()
+        setIsLoading(true)
+        const result = await createWorkspace(name.trim())
+        setIsLoading(false)
+
+        if (result) {
+            onClose()
+        }
     }
 
     return (

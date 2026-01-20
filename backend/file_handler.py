@@ -1,6 +1,6 @@
 """
 Dosya yükleme ve işleme modülü
-CSV ve Excel dosyalarını parse edip SQLite'a dinamik tablo olarak kaydeder
+CSV ve Excel dosyalarını parse edip veritabanına dinamik tablo olarak kaydeder
 """
 import pandas as pd
 import os
@@ -8,6 +8,10 @@ import re
 from sqlalchemy import create_engine, text, inspect
 from datetime import datetime
 import uuid
+
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
 
 # Maksimum dosya boyutu (50 MB)
 MAX_FILE_SIZE = 50 * 1024 * 1024
@@ -17,7 +21,9 @@ ALLOWED_EXTENSIONS = {'.csv', '.xlsx', '.xls'}
 
 # Veritabanı bağlantısı
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sales.db")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
+# SQLite için check_same_thread gerekli, PostgreSQL için değil
+connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 
 
 def sanitize_table_name(name: str) -> str:

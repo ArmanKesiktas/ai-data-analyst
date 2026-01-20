@@ -10,6 +10,10 @@ from datetime import datetime
 import os
 import re
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 from metadata import (
     save_table_metadata,
     save_column_metadata,
@@ -21,14 +25,19 @@ from metadata import (
 )
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sales.db")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
+# SQLite için check_same_thread gerekli, PostgreSQL için değil
+connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 
-# Type mapping: UI type -> SQLite type
+# PostgreSQL mi SQLite mi kontrol et
+IS_POSTGRES = "postgresql" in DATABASE_URL
+
+# Type mapping: UI type -> SQL type (works for both SQLite and PostgreSQL)
 TYPE_MAPPING = {
     "text": "TEXT",
-    "number": "REAL",
+    "number": "REAL" if not IS_POSTGRES else "DOUBLE PRECISION",
     "date": "DATE",
-    "boolean": "INTEGER"
+    "boolean": "INTEGER" if not IS_POSTGRES else "BOOLEAN"
 }
 
 # Reserved table names that cannot be created/modified
@@ -36,6 +45,23 @@ RESERVED_TABLES = {"_table_metadata", "_column_metadata", "_schema_changelog"}
 
 # Reserved column names
 RESERVED_COLUMNS = {"rowid"}
+
+
+def table_exists(conn, table_name: str) -> bool:
+    """
+    Check if a table exists in the database.
+    Works for both SQLite and PostgreSQL.
+    """
+    if IS_POSTGRES:
+        result = conn.execute(text("""
+            SELECT table_name FROM information_schema.tables 
+            WHERE table_schema = 'public' AND table_name = :name
+        """), {"name": table_name}).fetchone()
+    else:
+        result = conn.execute(text(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name = :name"
+        ), {"name": table_name}).fetchone()
+    return result is not None
 
 
 def validate_name(name: str, name_type: str = "table") -> tuple[bool, str]:
@@ -105,7 +131,7 @@ def generate_create_sql(table_name: str, columns: list, add_auto_id: bool = True
     Args:
         table_name: Name of the table
         columns: List of column dicts with keys: name, type, nullable, is_primary_key
-        add_auto_id: If True and no primary key defined, add 'id INTEGER PRIMARY KEY AUTOINCREMENT'
+        add_auto_id: If True and no primary key defined, add auto-increment id
     
     Returns:
         SQL CREATE TABLE statement
@@ -115,9 +141,12 @@ def generate_create_sql(table_name: str, columns: list, add_auto_id: bool = True
     
     column_defs = []
     
-    # Add auto ID if needed
+    # Add auto ID if needed (PostgreSQL uses SERIAL, SQLite uses AUTOINCREMENT)
     if add_auto_id and not has_primary_key:
-        column_defs.append("id INTEGER PRIMARY KEY AUTOINCREMENT")
+        if IS_POSTGRES:
+            column_defs.append("id SERIAL PRIMARY KEY")
+        else:
+            column_defs.append("id INTEGER PRIMARY KEY AUTOINCREMENT")
 
     # Add user_id for multi-tenant isolation (always add)
     column_defs.append("user_id INTEGER NOT NULL")
@@ -132,7 +161,8 @@ def generate_create_sql(table_name: str, columns: list, add_auto_id: bool = True
         
         if is_pk:
             parts.append("PRIMARY KEY")
-            if col_type == "INTEGER":
+            # PostgreSQL doesn't use AUTOINCREMENT for primary keys (use SERIAL type instead)
+            if not IS_POSTGRES and col_type == "INTEGER":
                 parts.append("AUTOINCREMENT")
         elif not nullable:
             parts.append("NOT NULL")
@@ -167,11 +197,7 @@ def create_table(table_name: str, columns: list, add_auto_id: bool = True) -> di
     
     # Check if table already exists
     with engine.connect() as conn:
-        result = conn.execute(text(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name = :name"
-        ), {"name": table_name}).fetchone()
-        
-        if result:
+        if table_exists(conn, table_name):
             return {"success": False, "error": f"Table '{table_name}' already exists"}
     
     # Generate and execute SQL
@@ -243,19 +269,11 @@ def rename_table(old_name: str, new_name: str) -> dict:
     try:
         with engine.connect() as conn:
             # Check if old table exists
-            result = conn.execute(text(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name = :name"
-            ), {"name": old_name}).fetchone()
-            
-            if not result:
+            if not table_exists(conn, old_name):
                 return {"success": False, "error": f"Table '{old_name}' not found"}
             
             # Check if new name already exists
-            result = conn.execute(text(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name = :name"
-            ), {"name": new_name}).fetchone()
-            
-            if result:
+            if table_exists(conn, new_name):
                 return {"success": False, "error": f"Table '{new_name}' already exists"}
             
             # Rename table
@@ -282,11 +300,7 @@ def truncate_table(table_name: str) -> dict:
     try:
         with engine.connect() as conn:
             # Check if table exists
-            result = conn.execute(text(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name = :name"
-            ), {"name": table_name}).fetchone()
-            
-            if not result:
+            if not table_exists(conn, table_name):
                 return {"success": False, "error": f"Table '{table_name}' not found"}
             
             # Get row count before
@@ -320,11 +334,7 @@ def drop_table(table_name: str) -> dict:
     try:
         with engine.connect() as conn:
             # Check if table exists
-            result = conn.execute(text(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name = :name"
-            ), {"name": table_name}).fetchone()
-            
-            if not result:
+            if not table_exists(conn, table_name):
                 return {"success": False, "error": f"Table '{table_name}' not found"}
             
             # Drop table
@@ -438,30 +448,73 @@ def check_type_change_safety(table_name: str, column_name: str, new_type: str) -
 def get_all_user_tables() -> list:
     """Get all user-created tables (excluding system tables)"""
     with engine.connect() as conn:
-        result = conn.execute(text("""
-            SELECT name FROM sqlite_master 
-            WHERE type='table' 
-            AND name NOT LIKE '_%'
-            AND name != 'sqlite_sequence'
-            ORDER BY name
-        """)).fetchall()
+        if IS_POSTGRES:
+            result = conn.execute(text("""
+                SELECT table_name FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name NOT LIKE '\\_%' ESCAPE '\\'
+                ORDER BY table_name
+            """)).fetchall()
+        else:
+            result = conn.execute(text("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' 
+                AND name NOT LIKE '_%'
+                AND name != 'sqlite_sequence'
+                ORDER BY name
+            """)).fetchall()
     
     return [row[0] for row in result]
 
 
 def get_table_schema(table_name: str) -> list:
-    """Get the actual schema of a table from SQLite"""
+    """Get the actual schema of a table from the database"""
     with engine.connect() as conn:
-        result = conn.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
-    
-    return [
-        {
-            "cid": row[0],
-            "name": row[1],
-            "type": row[2],
-            "notnull": bool(row[3]),
-            "default": row[4],
-            "is_primary_key": bool(row[5])
-        }
-        for row in result
-    ]
+        if IS_POSTGRES:
+            result = conn.execute(text("""
+                SELECT 
+                    ordinal_position as cid,
+                    column_name as name,
+                    data_type as type,
+                    is_nullable = 'NO' as notnull,
+                    column_default as default_val,
+                    CASE WHEN pk.column_name IS NOT NULL THEN true ELSE false END as is_pk
+                FROM information_schema.columns c
+                LEFT JOIN (
+                    SELECT kcu.column_name
+                    FROM information_schema.table_constraints tc
+                    JOIN information_schema.key_column_usage kcu 
+                        ON tc.constraint_name = kcu.constraint_name
+                    WHERE tc.table_name = :table_name 
+                    AND tc.constraint_type = 'PRIMARY KEY'
+                ) pk ON c.column_name = pk.column_name
+                WHERE c.table_schema = 'public' AND c.table_name = :table_name
+                ORDER BY ordinal_position
+            """), {"table_name": table_name}).fetchall()
+            
+            return [
+                {
+                    "cid": row[0],
+                    "name": row[1],
+                    "type": row[2],
+                    "notnull": bool(row[3]),
+                    "default": row[4],
+                    "is_primary_key": bool(row[5])
+                }
+                for row in result
+            ]
+        else:
+            result = conn.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
+            
+            return [
+                {
+                    "cid": row[0],
+                    "name": row[1],
+                    "type": row[2],
+                    "notnull": bool(row[3]),
+                    "default": row[4],
+                    "is_primary_key": bool(row[5])
+                }
+                for row in result
+            ]
+

@@ -113,6 +113,7 @@ class WorkspaceInvitationResponse(BaseModel):
     id: int
     email: str
     role: str
+    token: Optional[str] = None
     invited_by: str
     created_at: str
     expires_at: str
